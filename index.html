@@ -11,6 +11,31 @@
 
 <style>
 
+.dashboard {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0 15px 0;
+}
+
+.dash-card {
+    flex: 1;
+    background: white;
+    border-radius: 14px;
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.dash-value {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.dash-label {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
 .data-fab {
     position: fixed;
     bottom: 16px;
@@ -139,6 +164,43 @@ label {
 
 <h2>Statistik</h2>
 
+<div id="dashboard" class="dashboard">
+
+    <div class="dash-card">
+        <div class="dash-value" id="dScore">0</div>
+        <div class="dash-label">Score</div>
+    </div>
+
+    <div class="dash-card">
+        <div class="dash-value" id="dHit">0%</div>
+        <div class="dash-label">Treffer</div>
+    </div>
+
+    <div class="dash-card">
+        <div class="dash-value" id="dWin">0%</div>
+        <div class="dash-label">Siege</div>
+    </div>
+
+</div>
+
+<!-- NEU: kleine Zusatz-Stats -->
+<div class="dashboard" style="margin-top:0;">
+
+    <div class="dash-card">
+        <div class="dash-value" id="dAvgEmpty" style="font-size:14px;">0</div>
+        <div class="dash-label">Ø Leer</div>
+    </div>
+
+    <div class="dash-card">
+        <div class="dash-value" id="dTropf" style="font-size:14px;">0%</div>
+        <div class="dash-label">Tropf</div>
+    </div>
+    <div class="dash-card">
+    <div class="dash-value" id="dRounds" style="font-size:14px;">0</div>
+    <div class="dash-label">Runden</div>
+</div>
+</div>
+
 <input id="w" type="number" placeholder="Geworfen">
 <input id="t" type="number" placeholder="Getroffen">
 <input id="e" type="number" placeholder="Leer nach">
@@ -173,6 +235,23 @@ label {
 <button class="back-fixed" onclick="back()">Zurück</button>
 
 <h2>Verlauf</h2>
+
+<div style="margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+
+    <select id="sortOrder" onchange="openV()">
+        <option value="newest">Neueste zuerst</option>
+        <option value="oldest">Älteste zuerst</option>
+    </select>
+
+    <select id="filterResult" onchange="openV()">
+        <option value="all">Alle</option>
+        <option value="win">Nur Siege</option>
+        <option value="loss">Nur Niederlagen</option>
+        <option value="tropf">Nur Getropft</option>
+    </select>
+
+</div>
+
 <div id="list"></div>
 
 </div>
@@ -338,22 +417,15 @@ function stats(){
 
     let tropfQuote = loss ? (tropfLoss / loss * 100) : 0;
 
-    document.getElementById("stats").innerText =
-`Zeitraum: ${document.getElementById("period").options[document.getElementById("period").selectedIndex].text}
 
-Würfe: ${g.w}
-Treffer: ${g.t}
-Runden: ${g.r}
-Siege: ${g.win}
+// Dashboard aktualisieren
+document.getElementById("dScore").innerText = score.toFixed(1);
+document.getElementById("dHit").innerText = tr.toFixed(0) + "%";
+document.getElementById("dWin").innerText = sg.toFixed(0) + "%";
 
-Trefferquote: ${tr.toFixed(2)}%
-Siegquote: ${sg.toFixed(2)}%
-
-Ø Leer: ${ae.toFixed(2)}
-
-Tropf-Quote (bei Niederlagen): ${tropfQuote.toFixed(2)}%
-
-Score: ${score.toFixed(2)}`;
+document.getElementById("dAvgEmpty").innerText = ae.toFixed(2);
+document.getElementById("dTropf").innerText = tropfQuote.toFixed(0) + "%";
+document.getElementById("dRounds").innerText = g.r;
 
     updateChart();
 }
@@ -434,9 +506,27 @@ function openV(){
     let list = document.getElementById("list");
     list.innerHTML = "";
 
-    data.v.slice().reverse().forEach((e,i)=>{
+    let sortOrder = document.getElementById("sortOrder")?.value || "newest";
+    let filter = document.getElementById("filterResult")?.value || "all";
 
-        let id = data.v.length-1-i;
+    let entries = data.v.slice();
+
+    // 🔽 Filter
+    entries = entries.filter(e => {
+        if(filter === "win") return e.win;
+        if(filter === "loss") return !e.win && !e.tropf;
+        if(filter === "tropf") return e.tropf;
+        return true;
+    });
+
+    // 🔄 Sortierung
+    entries.sort((a, b) => {
+        return sortOrder === "oldest"
+            ? a.time - b.time
+            : b.time - a.time;
+    });
+
+    entries.forEach((e)=>{
 
         let div = document.createElement("div");
         div.className = "card " + (e.win ? "win" : (e.tropf ? "loss-tropf" : "loss"));
@@ -452,15 +542,16 @@ function openV(){
         <div class="row"><b>Getropft</b><span>${e.tropf ? "Ja" : "Nein"}</span></div>
         <div class="row"><b>Bier</b><span>${e.bier ? "Ja" : "Nein"}</span></div>
 
-        <button onclick="del(${id})">Löschen</button>
+        <button onclick="del(${data.v.indexOf(e)})">Löschen</button>
         `;
 
         list.appendChild(div);
     });
 }
 
-
 function del(i){
+
+    if(!confirm("Wirklich löschen?")) return;
 
     let e = data.v[i];
     let g = data.g;
