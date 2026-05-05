@@ -207,7 +207,11 @@ label {
 
 <label><input type="checkbox" id="win"> Gewonnen</label>
 <label><input type="checkbox" id="tropf"> Getropft</label>
-<label><input type="checkbox" id="bier" checked> Bier</label>
+<select id="drink">
+    <option value="05">Bier 0,5</option>
+    <option value="033">Bier 0,33</option>
+    <option value="small">Kein Bier</option>
+</select>
 
 <button onclick="add()">Eintragen</button>
 <button onclick="openV()">Verlauf</button>
@@ -267,6 +271,15 @@ let data = JSON.parse(localStorage.getItem("offline_app")) || {
     },
     v:[]
 };
+
+function adjustE(e, drink){
+    if(e === null || isNaN(e)) return null;
+
+    if(drink === "033") return e + 1;
+    if(drink === "small") return e * 1.5;
+
+    return e; // Bier 0,5
+}
 
 function save(){
     localStorage.setItem("offline_app", JSON.stringify(data));
@@ -399,10 +412,9 @@ function stats(){
         }
 
         if(e.e !== null && !isNaN(e.e)){
-            let val = e.bier ? e.e : e.e * 1.5;
-            eSum += val;
-            eCount++;
-        }
+    eSum += e.e;
+    eCount++;
+}
     }
 
     let tr = g.w ? (g.t/g.w*100) : 0;
@@ -439,12 +451,15 @@ function add(){
     let eEl = eInput();
 
     let w = +wEl.value;
-    let t = +tEl.value;
-    let e = val("e");
+let t = +tEl.value;
 
-    let win = winInput().checked;
-    let tropf = tropfInput().checked;
-    let bier = document.getElementById("bier").checked;
+let drink = document.getElementById("drink").value;
+
+let eRaw = val("e");
+let e = adjustE(eRaw, drink);
+
+let win = winInput().checked;
+let tropf = tropfInput().checked;
 
     let hasError = false;
 
@@ -489,8 +504,9 @@ function add(){
 
     data.v.push({
         w,t,win,tropf,
-        bier,
+        drink,
         e,
+        eRaw,
         time: Date.now()
     });
 
@@ -534,9 +550,21 @@ function openV(){
         div.innerHTML = `
         <div class="small">${new Date(e.time).toLocaleDateString("de-DE")}</div>
 
+        <div class="row"><b>Getränk</b><span>
+        ${e.drink === "05" ? "Bier 0,5" :
+        e.drink === "033" ? "Bier 0,33" :
+        "Kleines Bier"}
+        </span></div>
+
         <div class="row"><b>Würfe</b><span>${e.w}</span></div>
         <div class="row"><b>Treffer</b><span>${e.t}</span></div>
-        <div class="row"><b>Leer nach</b><span>${e.e??"-"}</span></div>
+        <div class="row">
+        <b>Leer nach</b>
+        <span>
+            ${e.eRaw ?? "-"}
+            ${e.eRaw !== null && e.eRaw !== undefined ? " → " + e.e : ""}
+        </span>
+        </div>
 
         <div class="row"><b>Ergebnis</b><span>${e.win ? "Gewonnen" : "Verloren"}</span></div>
         <div class="row"><b>Getropft</b><span>${e.tropf ? "Ja" : "Nein"}</span></div>
@@ -598,7 +626,7 @@ function clear(){
     ["w","t","e"].forEach(i=>document.getElementById(i).value="");
     winInput().checked=false;
     tropfInput().checked=false;
-    document.getElementById("bier").checked = true;
+    document.getElementById("drink").value = "05";
     clearErrors();
 }
 
