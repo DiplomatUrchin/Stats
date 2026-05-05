@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Statistik App</title>
+
+<link rel="manifest" href="manifest.json">
+
+<script src="chart.js"></script>
+
+<style>
+
+.data-fab {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 1000;
+    text-align: right;
+}
+
+.data-btn {
+    width: auto;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #e5e5ea;
+    border: none;
+    font-size: 14px;
+}
+
+.data-menu {
+    display: none;
+    margin-top: 8px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.data-menu button {
+    width: 120px;
+    display: block;
+    border-radius: 0;
+    margin: 0;
+    border-bottom: 1px solid #eee;
+}
+
+.data-menu button:last-child {
+    border-bottom: none;
+}
+
+.back-fixed {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    width: auto;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #e5e5ea;
+    z-index: 1000;
+}
+
+body {
+    font-family: -apple-system, Arial;
+    margin: 0;
+    background: #f2f2f7;
+}
+
+.page { display: none; padding: 16px; }
+.active { display: block; }
+
+h2 { margin: 10px 0; }
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 6px 0;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+}
+
+input.error {
+    border: 2px solid red;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    margin: 6px 0;
+    font-size: 16px;
+    border-radius: 12px;
+    border: none;
+    background: #e5e5ea;
+    touch-action: manipulation;
+}
+
+button:active {
+    background: #d1d1d6;
+}
+
+.card {
+    background: white;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.win { background: #d8f8d8; }
+.loss { background: #f8d8d8; }
+.loss-tropf { background: #e0a8a8; }
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    margin: 3px 0;
+    font-size: 14px;
+}
+
+.small {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+label {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 6px 0;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="home" class="page active">
+
+<h2>Statistik</h2>
+
+<input id="w" type="number" placeholder="Geworfen">
+<input id="t" type="number" placeholder="Getroffen">
+<input id="e" type="number" placeholder="Leer nach">
+
+<label><input type="checkbox" id="win"> Gewonnen</label>
+<label><input type="checkbox" id="tropf"> Getropft</label>
+<label><input type="checkbox" id="bier" checked> Bier</label>
+
+<button onclick="add()">Eintragen</button>
+<button onclick="openV()">Verlauf</button>
+
+<select id="period" onchange="stats()">
+    <option value="all">Gesamt</option>
+    <option value="30">Letzte 30 Tage</option>
+    <option value="7">Letzte 7 Tage</option>
+    <option value="1">Heute</option>
+</select>
+
+<select id="xmode" onchange="updateChart()">
+    <option value="entry">Pro Eintrag</option>
+    <option value="day">Pro Tag</option>
+</select>
+
+<pre id="stats"></pre>
+
+<canvas id="chart" style="margin-top:20px;"></canvas>
+
+</div>
+
+<div id="verlauf" class="page">
+
+<button class="back-fixed" onclick="back()">Zurück</button>
+
+<h2>Verlauf</h2>
+<div id="list"></div>
+
+</div>
+
+<script>
+
+let chart;
+
+let data = JSON.parse(localStorage.getItem("offline_app")) || {
+    g: {
+        w:0,t:0,r:0,win:0,tropf:0,
+        eS:0,eC:0
+    },
+    v:[]
+};
+
+function save(){
+    localStorage.setItem("offline_app", JSON.stringify(data));
+}
+
+function getFilteredData(){
+    let p = document.getElementById("period").value;
+    let now = Date.now();
+
+    if(p === "all") return data.v;
+
+    let days = parseInt(p);
+    let ms = days * 24 * 60 * 60 * 1000;
+
+    return data.v.filter(e => (now - e.time) <= ms);
+}
+
+/* ANGEPAST */
+function calculateScore(entries){
+
+    let g = { w:0,t:0,r:0,win:0 };
+    let eSum = 0, eCount = 0;
+
+    for(let e of entries){
+        g.w += e.w;
+        g.t += e.t;
+        g.r++;
+
+        if(e.win) g.win++;
+
+        if(e.e !== null && !isNaN(e.e)){
+            let val = e.bier ? e.e : e.e * 1.5;
+            eSum += val;
+            eCount++;
+        }
+    }
+
+    let tr = g.w ? (g.t/g.w*100) : 0;
+    let sg = g.r ? (g.win/g.r*100) : 0;
+    let ae = eCount ? (eSum/eCount) : 0;
+
+    return (tr / 100) * 40 +
+           (sg / 100) * 20 +
+           (ae > 0 ? (1 / ae) * 40 : 0);
+}
+
+function updateChart(){
+
+    let filtered = getFilteredData();
+    let mode = document.getElementById("xmode").value;
+
+    let labels = [];
+    let values = [];
+
+    if(mode === "entry"){
+
+        let temp = [];
+
+        filtered.forEach((e,i)=>{
+            temp.push(e);
+            labels.push(i+1);
+            values.push(calculateScore(temp));
+        });
+
+    } else {
+
+        let groups = {};
+
+        filtered.forEach(e=>{
+            let d = new Date(e.time).toLocaleDateString("de-DE");
+            if(!groups[d]) groups[d] = [];
+            groups[d].push(e);
+        });
+
+        let keys = Object.keys(groups);
+
+        let temp = [];
+
+        keys.forEach(k=>{
+            temp = temp.concat(groups[k]);
+            labels.push(k);
+            values.push(calculateScore(temp));
+        });
+    }
+
+    if(chart) chart.destroy();
+
+    chart = new Chart(document.getElementById("chart"), {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Score",
+                data: values,
+                fill: false,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+function stats(){
+
+    let g = { w:0,t:0,r:0,win:0 };
+
+    let filtered = getFilteredData();
+
+    let eSum = 0, eCount = 0;
+
+    let loss = 0;
+    let tropfLoss = 0;
+
+    /* ANGEPAST */
+    for(let e of filtered){
+
+        g.w += e.w;
+        g.t += e.t;
+        g.r++;
+
+        if(e.win) g.win++;
+        else{
+            loss++;
+            if(e.tropf) tropfLoss++;
+        }
+
+        if(e.e !== null && !isNaN(e.e)){
+            let val = e.bier ? e.e : e.e * 1.5;
+            eSum += val;
+            eCount++;
+        }
+    }
+
+    let tr = g.w ? (g.t/g.w*100) : 0;
+    let sg = g.r ? (g.win/g.r*100) : 0;
+
+    let ae = eCount ? (eSum/eCount) : 0;
+
+    let score =
+        (tr / 100) * 40 +
+        (sg / 100) * 20 +
+        (ae > 0 ? (1 / ae) * 40 : 0);
+
+    let tropfQuote = loss ? (tropfLoss / loss * 100) : 0;
+
+    document.getElementById("stats").innerText =
+`Zeitraum: ${document.getElementById("period").options[document.getElementById("period").selectedIndex].text}
+
+Würfe: ${g.w}
+Treffer: ${g.t}
+Runden: ${g.r}
+Siege: ${g.win}
+
+Trefferquote: ${tr.toFixed(2)}%
+Siegquote: ${sg.toFixed(2)}%
+
+Ø Leer: ${ae.toFixed(2)}
+
+Tropf-Quote (bei Niederlagen): ${tropfQuote.toFixed(2)}%
+
+Score: ${score.toFixed(2)}`;
+
+    updateChart();
+}
+
+function add(){
+
+    clearErrors();
+
+    let wEl = wInput();
+    let tEl = tInput();
+    let eEl = eInput();
+
+    let w = +wEl.value;
+    let t = +tEl.value;
+    let e = val("e");
+
+    let win = winInput().checked;
+    let tropf = tropfInput().checked;
+    let bier = document.getElementById("bier").checked;
+
+    let hasError = false;
+
+    if(wEl.value === ""){
+        wEl.classList.add("error");
+        hasError = true;
+    }
+
+    if(tEl.value === ""){
+        tEl.classList.add("error");
+        hasError = true;
+    }
+
+    if(win && eEl.value === ""){
+        eEl.classList.add("error");
+        hasError = true;
+    }
+
+    if(hasError) return;
+
+    if(t > w){
+        wEl.classList.add("error");
+        tEl.classList.add("error");
+        return;
+    }
+
+    let g = data.g;
+
+    g.w += w;
+    g.t += t;
+    g.r++;
+
+    if(win) g.win++;
+    if(tropf) g.tropf++;
+
+    if(t>0){
+        if(e !== null){
+            g.eS += e;
+            g.eC++;
+        }
+    }
+
+    data.v.push({
+        w,t,win,tropf,
+        bier,
+        e,
+        time: Date.now()
+    });
+
+    save();
+    stats();
+    clear();
+}
+
+function openV(){
+
+    page("verlauf");
+
+    let list = document.getElementById("list");
+    list.innerHTML = "";
+
+    data.v.slice().reverse().forEach((e,i)=>{
+
+        let id = data.v.length-1-i;
+
+        let div = document.createElement("div");
+        div.className = "card " + (e.win ? "win" : (e.tropf ? "loss-tropf" : "loss"));
+
+        div.innerHTML = `
+        <div class="small">${new Date(e.time).toLocaleDateString("de-DE")}</div>
+
+        <div class="row"><b>Würfe</b><span>${e.w}</span></div>
+        <div class="row"><b>Treffer</b><span>${e.t}</span></div>
+        <div class="row"><b>Leer nach</b><span>${e.e??"-"}</span></div>
+
+        <div class="row"><b>Ergebnis</b><span>${e.win ? "Gewonnen" : "Verloren"}</span></div>
+        <div class="row"><b>Getropft</b><span>${e.tropf ? "Ja" : "Nein"}</span></div>
+        <div class="row"><b>Bier</b><span>${e.bier ? "Ja" : "Nein"}</span></div>
+
+        <button onclick="del(${id})">Löschen</button>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+
+function del(i){
+
+    let e = data.v[i];
+    let g = data.g;
+
+    g.w -= e.w;
+    g.t -= e.t;
+    g.r--;
+
+    if(e.bier){
+        if(e.win) g.win--;
+        if(e.tropf) g.tropf--;
+
+        if(e.e!==null){ g.eS-=e.e; g.eC--; }
+    }
+
+    data.v.splice(i,1);
+
+    save();
+    stats();
+    openV();
+}
+
+function back(){
+    page("home");
+}
+
+function page(id){
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+}
+
+const wInput=()=>document.getElementById("w");
+const tInput=()=>document.getElementById("t");
+const eInput=()=>document.getElementById("e");
+const winInput=()=>document.getElementById("win");
+const tropfInput=()=>document.getElementById("tropf");
+
+function val(id){
+    let v=document.getElementById(id).value;
+    return v===""?null:+v;
+}
+
+function clear(){
+    ["w","t","e"].forEach(i=>document.getElementById(i).value="");
+    winInput().checked=false;
+    tropfInput().checked=false;
+    document.getElementById("bier").checked = true;
+    clearErrors();
+}
+
+function clearErrors(){
+    ["w","t","e"].forEach(i=>document.getElementById(i).classList.remove("error"));
+}
+
+winInput().addEventListener("change", () => {
+    if(winInput().checked){
+        tropfInput().checked = false;
+    }
+});
+
+tropfInput().addEventListener("change", () => {
+    if(tropfInput().checked){
+        winInput().checked = false;
+    }
+});
+
+stats();
+
+if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("service-worker.js");
+}
+
+function exportData(){
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "statistik_backup.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+function importData(event){
+    const file = event.target.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e){
+        try {
+            const imported = JSON.parse(e.target.result);
+
+            // einfache Validierung
+            if(!imported.g || !imported.v){
+                alert("Ungültige Datei");
+                return;
+            }
+
+            data = imported;
+            save();
+            stats();
+
+            alert("Import erfolgreich");
+
+        } catch(err){
+            alert("Fehler beim Import");
+        }
+    };
+
+    reader.readAsText(file);
+}
+function toggleDataMenu(){
+    const menu = document.getElementById("dataMenu");
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+// optional: schließen wenn man woanders klickt
+document.addEventListener("click", function(e){
+    const fab = document.querySelector(".data-fab");
+    if(!fab.contains(e.target)){
+        document.getElementById("dataMenu").style.display = "none";
+    }
+});
+
+</script>
+<div class="data-fab">
+    <button class="data-btn" onclick="toggleDataMenu()">Daten</button>
+
+    <div id="dataMenu" class="data-menu">
+        <button onclick="exportData()">Export</button>
+        <button onclick="document.getElementById('importFile').click()">Import</button>
+    </div>
+
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+</div>
+</body>
+</html>
