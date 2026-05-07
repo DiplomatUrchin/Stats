@@ -235,6 +235,14 @@ label {
     <option value="day">Pro Tag</option>
 </select>
 
+<select id="graphType" onchange="updateChart()">
+    <option value="score">Score</option>
+    <option value="hit">Trefferquote</option>
+    <option value="win">Siegquote</option>
+    <option value="empty">Leer-Durchschnitt</option>
+    <option value="tropf">Tropfquote</option>
+</select>
+
 <pre id="stats"></pre>
 
 <canvas id="chart" style="margin-top:20px;"></canvas>
@@ -350,18 +358,78 @@ function updateChart(){
 
     let filtered = getFilteredData();
     let mode = document.getElementById("xmode").value;
+    let graphType = document.getElementById("graphType").value;
 
     let labels = [];
     let values = [];
+
+    function calcValue(entries){
+
+        let g = {
+            w:0,
+            t:0,
+            r:0,
+            win:0
+        };
+
+        let eSum = 0;
+        let eCount = 0;
+
+        let loss = 0;
+        let tropfLoss = 0;
+
+        for(let e of entries){
+
+            g.w += e.w;
+            g.t += e.t;
+            g.r++;
+
+            if(e.win) g.win++;
+            else{
+                loss++;
+
+                if(e.tropf) tropfLoss++;
+            }
+
+            if(e.eRaw !== null && e.eRaw !== undefined){
+
+                let adjusted = adjustE(e.eRaw, e.drink);
+
+                eSum += adjusted;
+                eCount++;
+            }
+        }
+
+        let tr = g.w ? (g.t / g.w * 100) : 0;
+        let sg = g.r ? (g.win / g.r * 100) : 0;
+        let ae = eCount ? (eSum / eCount) : 0;
+        let tq = loss ? (tropfLoss / loss * 100) : 0;
+
+        let score =
+            (tr / 100) * 40 +
+            (sg / 100) * 20 +
+            (ae > 0 ? (3 / ae) * 40 : 0);
+
+        if(graphType === "score") return score;
+        if(graphType === "hit") return tr;
+        if(graphType === "win") return sg;
+        if(graphType === "empty") return ae;
+        if(graphType === "tropf") return tq;
+
+        return 0;
+    }
 
     if(mode === "entry"){
 
         let temp = [];
 
         filtered.forEach((e,i)=>{
+
             temp.push(e);
-            labels.push(i+1);
-            values.push(calculateScore(temp));
+
+            labels.push(i + 1);
+
+            values.push(calcValue(temp));
         });
 
     } else {
@@ -369,8 +437,11 @@ function updateChart(){
         let groups = {};
 
         filtered.forEach(e=>{
+
             let d = new Date(e.time).toLocaleDateString("de-DE");
+
             if(!groups[d]) groups[d] = [];
+
             groups[d].push(e);
         });
 
@@ -379,31 +450,68 @@ function updateChart(){
         let temp = [];
 
         keys.forEach(k=>{
+
             temp = temp.concat(groups[k]);
+
             labels.push(k);
-            values.push(calculateScore(temp));
+
+            values.push(calcValue(temp));
         });
     }
 
     if(chart) chart.destroy();
 
     chart = new Chart(document.getElementById("chart"), {
+
         type: "line",
+
         data: {
             labels: labels,
             datasets: [{
-                label: "Score",
+                label: graphType,
                 data: values,
                 fill: false,
                 tension: 0.2
             }]
         },
+
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false }
-            }
+                legend: {
+                    display: false
+                },
+                tooltip: {
+    callbacks: {
+        label: function(context) {
+
+            let filtered = getFilteredData();
+            let e = filtered[context.dataIndex];
+
+            if(!e) return "";
+
+            return [
+                "Score: " + context.parsed.y.toFixed(1),
+                "Würfe: " + e.w,
+                "Treffer: " + e.t,
+                "Leer: " + (e.eRaw ?? "-"),
+                "Ergebnis: " + (e.win ? "Win" : "Loss")
+            ];
         }
+    }
+}
+    },
+
+    onClick: (evt, elements) => {
+        if (!elements.length) return;
+
+        let index = elements[0].index;
+
+        showEntryDetails(index);
+    }
+}
+                
+        
     });
 }
 
@@ -460,6 +568,24 @@ document.getElementById("dTropf").innerText = tropfQuote.toFixed(0) + "%";
 document.getElementById("dRounds").innerText = g.r;
 
     updateChart();
+}
+
+function showEntryDetails(i){
+
+    let filtered = getFilteredData();
+
+    let e = filtered[i];
+
+    if(!e) return;
+
+    alert(
+        "Details:\n\n" +
+        "Würfe: " + e.w + "\n" +
+        "Treffer: " + e.t + "\n" +
+        "Leer: " + (e.eRaw ?? "-") + "\n" +
+        "Gewonnen: " + (e.win ? "Ja" : "Nein") + "\n" +
+        "Getropft: " + (e.tropf ? "Ja" : "Nein")
+    );
 }
 
 function add(){
