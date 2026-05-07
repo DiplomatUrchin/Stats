@@ -502,13 +502,6 @@ function updateChart(){
 }
     },
 
-    onClick: (evt, elements) => {
-        if (!elements.length) return;
-
-        let index = elements[0].index;
-
-        showEntryDetails(index);
-    }
 }
                 
         
@@ -570,23 +563,6 @@ document.getElementById("dRounds").innerText = g.r;
     updateChart();
 }
 
-function showEntryDetails(i){
-
-    let filtered = getFilteredData();
-
-    let e = filtered[i];
-
-    if(!e) return;
-
-    alert(
-        "Details:\n\n" +
-        "Würfe: " + e.w + "\n" +
-        "Treffer: " + e.t + "\n" +
-        "Leer: " + (e.eRaw ?? "-") + "\n" +
-        "Gewonnen: " + (e.win ? "Ja" : "Nein") + "\n" +
-        "Getropft: " + (e.tropf ? "Ja" : "Nein")
-    );
-}
 
 function add(){
 
