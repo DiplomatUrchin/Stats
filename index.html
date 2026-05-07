@@ -304,33 +304,46 @@ function getFilteredData(){
     return data.v.filter(e => (now - e.time) <= ms);
 }
 
-/* ANGEPAST */
 function calculateScore(entries){
 
-    let g = { w:0,t:0,r:0,win:0 };
-    let eSum = 0, eCount = 0;
+    let g = {
+        w:0,
+        t:0,
+        r:0,
+        win:0
+    };
+
+    let eSum = 0;
+    let eCount = 0;
 
     for(let e of entries){
+
         g.w += e.w;
         g.t += e.t;
         g.r++;
 
         if(e.win) g.win++;
 
-        if(e.e !== null && !isNaN(e.e)){
-            let val = e.bier ? e.e : e.e * 1.5;
-            eSum += val;
+        // Leer-Wert IMMER neu nach aktuellem System berechnen
+        if(e.eRaw !== null && e.eRaw !== undefined && !isNaN(e.eRaw)){
+
+            let adjusted = adjustE(e.eRaw, e.drink);
+
+            eSum += adjusted;
             eCount++;
         }
     }
 
-    let tr = g.w ? (g.t/g.w*100) : 0;
-    let sg = g.r ? (g.win/g.r*100) : 0;
-    let ae = eCount ? (eSum/eCount) : 0;
+    let tr = g.w ? (g.t / g.w * 100) : 0;
+    let sg = g.r ? (g.win / g.r * 100) : 0;
+    let ae = eCount ? (eSum / eCount) : 0;
 
-    return (tr / 100) * 40 +
-           (sg / 100) * 20 +
-           (ae > 0 ? (1 / ae) * 40 : 0);
+    let score =
+        (tr / 100) * 40 +
+        (sg / 100) * 20 +
+        (ae > 0 ? (3 / ae) * 40 : 0);
+
+    return score;
 }
 
 function updateChart(){
