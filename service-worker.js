@@ -1,4 +1,4 @@
-const CACHE_NAME = "statistik-app-v1";
+const CACHE_NAME = "statistik-app-v2";
 
 // Dateien, die wirklich gecached werden sollen
 const ASSETS = [
@@ -41,13 +41,6 @@ self.addEventListener("fetch", event => {
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                // erfolgreiche Requests optional updaten
-                const responseClone = response.clone();
-
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, responseClone);
-                });
-
                 return response;
             })
             .catch(() => {
