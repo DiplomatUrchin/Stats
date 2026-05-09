@@ -11,6 +11,62 @@
 
 <style>
 
+/* ===== DARKMODE ===== */
+
+body.dark {
+    background: #121212;
+    color: #e5e5ea;
+}
+
+body.dark .card,
+body.dark .dash-card,
+body.dark .data-menu {
+    background: #1e1e1e;
+    color: #e5e5ea;
+}
+
+body.dark input,
+body.dark select {
+    background: #2a2a2a;
+    color: #e5e5ea;
+    border: 1px solid #444;
+}
+
+body.dark button {
+    background: #2a2a2a;
+    color: #e5e5ea;
+}
+
+body.dark button:active {
+    background: #3a3a3a;
+}
+
+/* kleiner Toggle-Button */
+.dark-toggle {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    width: auto;
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+    background: #e5e5ea;
+    border: none;
+    z-index: 2000;
+}
+
+body.dark .win {
+    background: #1f3a2a; /* dunkelgrün */
+}
+
+body.dark .loss {
+    background: #4a2323; /* dunkelrot */
+}
+
+body.dark .loss-tropf {
+    background: #3a1f1f; /* stärker rot */
+}
+
 .dashboard {
     display: flex;
     gap: 10px;
@@ -166,9 +222,8 @@ label {
 </head>
 
 <body>
-
 <div id="home" class="page active">
-
+<button class="dark-toggle" onclick="toggleDark()" id="darkBtn">Dark</button>
 <h2>Statistik</h2>
 
 <div id="dashboard" class="dashboard">
@@ -354,6 +409,8 @@ function calculateScore(entries){
     return score;
 }
 
+
+
 function updateChart(){
 
     let filtered = getFilteredData();
@@ -480,31 +537,9 @@ function updateChart(){
             plugins: {
                 legend: {
                     display: false
-                },
-                tooltip: {
-    callbacks: {
-        label: function(context) {
-
-            let filtered = getFilteredData();
-            let e = filtered[context.dataIndex];
-
-            if(!e) return "";
-
-            return [
-                "Score: " + context.parsed.y.toFixed(1),
-                "Würfe: " + e.w,
-                "Treffer: " + e.t,
-                "Leer: " + (e.eRaw ?? "-"),
-                "Ergebnis: " + (e.win ? "Win" : "Loss")
-            ];
+                }
+            }
         }
-    }
-}
-    },
-
-}
-                
-        
     });
 }
 
@@ -562,7 +597,6 @@ document.getElementById("dRounds").innerText = g.r;
 
     updateChart();
 }
-
 
 function add(){
 
@@ -826,7 +860,40 @@ document.addEventListener("click", function(e){
         document.getElementById("dataMenu").style.display = "none";
     }
 });
+function toggleDark(){
+    document.body.classList.toggle("dark");
 
+    let isDark = document.body.classList.contains("dark");
+    localStorage.setItem("darkmode", isDark ? "1" : "0");
+
+    updateDarkButton();
+}
+
+function updateDarkButton(){
+    const btn = document.getElementById("darkBtn");
+
+    if(document.body.classList.contains("dark")){
+        btn.innerText = "Light";
+    } else {
+        btn.innerText = "Dark";
+    }
+}
+
+// beim Laden Zustand wiederherstellen
+(function(){
+    if(localStorage.getItem("darkmode") === "1"){
+        document.body.classList.add("dark");
+    }
+
+    updateDarkButton();
+})();
+
+// beim Laden Zustand wiederherstellen
+(function(){
+    if(localStorage.getItem("darkmode") === "1"){
+        document.body.classList.add("dark");
+    }
+})();
 </script>
 <div class="data-fab">
     <button class="data-btn" onclick="toggleDataMenu()">Daten</button>
