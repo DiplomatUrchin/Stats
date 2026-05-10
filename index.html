@@ -11,6 +11,37 @@
 
 <style>
 
+.card,
+.dash-card {
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.2s ease;
+}
+
+/* Beim Antippen */
+.card:active,
+.dash-card:active {
+    transform: scale(0.98);
+}
+
+/* Weiches Einblenden */
+.card,
+.dash-card {
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* ===== DARKMODE ===== */
 
 body.dark {
@@ -485,11 +516,13 @@ if(!data){
     data = {
         g: { w:0,t:0,r:0,win:0,tropf:0, eS:0,eC:0 },
         places: [],
+        defaultDrink: "05",
         v: []
     };
 } else {
     if(!data.places) data.places = [];
     if(!data.defaultPlace) data.defaultPlace = "";
+    if(!data.defaultDrink) data.defaultDrink = "05";
 }
 
 function adjustE(e, drink){
@@ -887,6 +920,28 @@ function handlePeriodChange() {
     }
 }
 
+function setDefaultDrink(){
+
+    data.defaultDrink =
+        document.getElementById("defaultDrinkSelect").value;
+
+    save();
+
+    // Hauptauswahl sofort aktualisieren
+    document.getElementById("drink").value =
+        data.defaultDrink;
+
+    // Settings-Auswahl synchron halten
+    document.getElementById("defaultDrinkSelect").value =
+        data.defaultDrink;
+
+        document.getElementById("drink").value =
+    data.defaultDrink || "05";
+
+    document.getElementById("defaultDrinkSelect").value =
+    data.defaultDrink || "05";
+}
+
 function openV(){
 
     page("verlauf");
@@ -1034,9 +1089,18 @@ function val(id){
 
 function clear(){
     ["w","t","e"].forEach(i=>document.getElementById(i).value="");
-    winInput().checked=false;
-    tropfInput().checked=false;
-    document.getElementById("drink").value = "05";
+
+    winInput().checked = false;
+    tropfInput().checked = false;
+
+    // Standardgetränk wieder auswählen
+    document.getElementById("drink").value =
+        data.defaultDrink || "05";
+
+    // Standardort wieder auswählen
+    document.getElementById("place").value =
+        data.defaultPlace || "";
+
     clearErrors();
 }
 
@@ -1058,6 +1122,18 @@ tropfInput().addEventListener("change", () => {
 
 stats();
 refreshPlaces();
+
+document.getElementById("drink").value =
+    data.defaultDrink || "05";
+
+const defaultDrinkSelect =
+    document.getElementById("defaultDrinkSelect");
+
+if(defaultDrinkSelect){
+    defaultDrinkSelect.value =
+        data.defaultDrink || "05";
+}
+
 if("serviceWorker" in navigator){
     navigator.serviceWorker.register("service-worker.js");
 }
@@ -1106,9 +1182,17 @@ function importData(event){
 
 // optional: schließen wenn man woanders klickt
 document.addEventListener("DOMContentLoaded", () => {
+
     if(localStorage.getItem("darkmode") === "1"){
         document.body.classList.add("dark");
     }
+
+    // Standardgetränke korrekt laden
+    document.getElementById("drink").value =
+        data.defaultDrink || "05";
+
+    document.getElementById("defaultDrinkSelect").value =
+        data.defaultDrink || "05";
 
     updateDarkButton();
 });
@@ -1308,6 +1392,20 @@ function managePlaces(){
     <button onclick="managePlaces()">
         Orte bearbeiten
     </button>
+
+    <div style="padding:10px; border-top:1px solid #ccc;">
+
+    <div style="font-size:12px; opacity:0.7; margin-bottom:6px;">
+        Standardgetränk
+    </div>
+
+    <select id="defaultDrinkSelect" onchange="setDefaultDrink()">
+        <option value="05">Bier 0,5</option>
+        <option value="033">Bier 0,33</option>
+        <option value="small">Kein Bier</option>
+    </select>
+
+</div>
 
     <button onclick="exportData()">
         Export
