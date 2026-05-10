@@ -63,6 +63,7 @@ body.dark select {
     border: 1px solid #444;
 }
 
+
 body.dark button {
     background: #2a2a2a;
     color: #e5e5ea;
@@ -311,6 +312,73 @@ body.dark #placeModal button {
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
+/* ===== EINSTELLUNGSMENÜ EINHEITLICH ===== */
+
+.settings-menu {
+    background: white;
+    color: #000;
+    font-family: -apple-system, Arial;
+}
+
+/* alles im Menü bekommt gleiche Grundoptik */
+.settings-menu * {
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+/* Buttons + Selects einheitlich */
+/* Buttons im Menü bleiben kompakt */
+.settings-menu button {
+    width: 160px;
+}
+
+/* Select soll wie normale Inputs sein */
+.settings-menu select {
+    width: 100%;
+}
+
+
+/* Trennungslinien zwischen Elementen */
+.settings-menu button,
+.settings-menu select {
+    border-bottom: 1px solid #eee;
+}
+
+/* letzter Eintrag ohne Linie */
+.settings-menu button:last-child,
+.settings-menu select:last-child {
+    border-bottom: none;
+}
+
+/* Darkmode einheitlich */
+body.dark .settings-menu,
+body.dark .settings-menu button,
+body.dark .settings-menu select {
+    background: #1e1e1e;
+    color: #e5e5ea;
+    border-bottom: 1px solid #333;
+}
+
+.settings-menu {
+    background: #ffffff;
+    color: #000;
+}
+
+/* ALLES im Menü bekommt denselben Hintergrund */
+.settings-menu * {
+    background: #ffffff;
+    color: #000;
+    font-family: inherit;
+}
+
+/* Buttons und Selects sauber vereinheitlichen */
+.settings-menu button,
+.settings-menu select,
+.settings-menu > div {
+    background: #ffffff;
+}
+
+
 .win { background: #d8f8d8; }
 .loss { background: #f8d8d8; }
 .loss-tropf { background: #e0a8a8; }
@@ -325,6 +393,12 @@ body.dark #placeModal button {
 .small {
     font-size: 12px;
     opacity: 0.6;
+}
+
+body.dark .settings-menu,
+body.dark .settings-menu * {
+    background: #1e1e1e;
+    color: #e5e5ea;
 }
 
 body.dark .small-btn.active-default {
