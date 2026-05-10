@@ -1103,10 +1103,6 @@ function importData(event){
 
     reader.readAsText(file);
 }
-function toggleDataMenu(){
-    const menu = document.getElementById("dataMenu");
-    menu.style.display = menu.style.display === "block" ? "none" : "block";
-}
 
 // optional: schließen wenn man woanders klickt
 document.addEventListener("DOMContentLoaded", () => {
@@ -1303,16 +1299,6 @@ function managePlaces(){
     document.getElementById("placeModal").style.display = "block";
 }
 </script>
-<div class="data-fab">
-    <button class="data-btn" onclick="toggleDataMenu()">Daten</button>
-
-    <div id="dataMenu" class="data-menu">
-        <button onclick="exportData()">Export</button>
-        <button onclick="document.getElementById('importFile').click()">Import</button>
-    </div>
-
-    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
-</div>
 <div id="settingsMenu" class="settings-menu">
 
     <button onclick="toggleDark()" id="darkToggleBtn">
@@ -1323,7 +1309,18 @@ function managePlaces(){
         Orte bearbeiten
     </button>
 
+    <button onclick="exportData()">
+        Export
+    </button>
+
+    <button onclick="document.getElementById('importFile').click()">
+        Import
+    </button>
+
 </div>
+
+<input type="file" id="importFile" accept="application/json"
+       style="display:none" onchange="importData(event)">
 
 <div id="placeModal" style="
     display:none;
