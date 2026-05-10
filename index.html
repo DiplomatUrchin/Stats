@@ -168,7 +168,7 @@ input[type="checkbox"] {
 }
 
 input.error {
-    border: 2px solid red;
+    border: 2px solid red !important;
 }
 
 button {
@@ -297,7 +297,7 @@ body.dark .settings-menu {
     <option value="small">Kein Bier</option>
 </select>
 
-<button onclick="add()">Eintragen</button>
+<button id="saveBtn" onclick="add()">Eintragen</button>
 <button onclick="openV()">Verlauf</button>
 
 <select id="period" onchange="handlePeriodChange()">
@@ -362,7 +362,7 @@ body.dark .settings-menu {
 <script>
 
 let chart;
-
+let editIndex = null;
 let data = JSON.parse(localStorage.getItem("offline_app")) || {
     g: {
         w:0,t:0,r:0,win:0,tropf:0,
@@ -584,7 +584,15 @@ if(e.tropf) tropfCount++;
 
 function stats(){
 
-    let g = { w:0,t:0,r:0,win:0 };
+    let g = {
+    w:0,
+    t:0,
+    r:0,
+    win:0,
+    tropf:0,
+    eS:0,
+    eC:0
+};
 
     let filtered = getFilteredData();
 
@@ -600,12 +608,19 @@ function stats(){
         g.r++;
 
         if(e.win) g.win++;
+        if(e.tropf) g.tropf++;
 
 if(e.tropf) tropfCount++;
 
         if(e.e !== null && !isNaN(e.e)){
     eSum += e.e;
     eCount++;
+}
+
+g.eS += e.e || 0;
+
+if(e.e !== null && !isNaN(e.e)){
+    g.eC++;
 }
     }
 
@@ -655,28 +670,38 @@ let tropf = tropfInput().checked;
 
     let hasError = false;
 
-    if(wEl.value === ""){
-        wEl.classList.add("error");
-        hasError = true;
-    }
+// Geworfen prüfen
+if(wEl.value === ""){
+    wEl.classList.add("error");
+    hasError = true;
+}
 
-    if(tEl.value === ""){
-        tEl.classList.add("error");
-        hasError = true;
-    }
+// Getroffen prüfen
+if(tEl.value === ""){
+    tEl.classList.add("error");
+    hasError = true;
+}
 
-    if(win && eEl.value === ""){
-        eEl.classList.add("error");
-        hasError = true;
-    }
+// Leer nach prüfen wenn gewonnen
+if(win && eEl.value === ""){
+    eEl.classList.add("error");
+    hasError = true;
+}
 
-    if(hasError) return;
+// Wenn Treffer eingetragen aber Würfe leer
+if(tEl.value !== "" && wEl.value === ""){
+    wEl.classList.add("error");
+    hasError = true;
+}
 
-    if(t > w){
-        wEl.classList.add("error");
-        tEl.classList.add("error");
-        return;
-    }
+// Treffer darf nicht größer als Würfe sein
+if(wEl.value !== "" && tEl.value !== "" && t > w){
+    wEl.classList.add("error");
+    tEl.classList.add("error");
+    hasError = true;
+}
+
+if(hasError) return;
 
     let g = data.g;
 
@@ -694,13 +719,28 @@ let tropf = tropfInput().checked;
         }
     }
 
-    data.v.push({
-        w,t,win,tropf,
-        drink,
-        e,
-        eRaw,
-        time: Date.now()
-    });
+    const newEntry = {
+    w,t,win,tropf,
+    drink,
+    e,
+    eRaw,
+    time: editIndex !== null
+        ? data.v[editIndex].time
+        : Date.now()
+};
+
+if(editIndex !== null){
+
+    data.v[editIndex] = newEntry;
+
+    editIndex = null;
+
+    document.getElementById("saveBtn").innerText = "Eintragen";
+
+} else {
+
+    data.v.push(newEntry);
+}
 
     save();
     stats();
@@ -773,11 +813,39 @@ function openV(){
         <div class="row"><b>Ergebnis</b><span>${e.win ? "Gewonnen" : "Verloren"}</span></div>
         <div class="row"><b>Getropft</b><span>${e.tropf ? "Ja" : "Nein"}</span></div>
 
-        <button onclick="del(${data.v.indexOf(e)})">Löschen</button>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+    <button onclick="editEntry(${data.v.indexOf(e)})">Bearbeiten</button>
+    <button onclick="del(${data.v.indexOf(e)})">Löschen</button>
+</div>
         `;
 
         list.appendChild(div);
     });
+}
+
+function editEntry(i){
+
+    const e = data.v[i];
+
+    editIndex = i;
+
+    wInput().value = e.w;
+    tInput().value = e.t;
+
+    if(e.eRaw !== null && e.eRaw !== undefined){
+        eInput().value = e.eRaw;
+    } else {
+        eInput().value = "";
+    }
+
+    winInput().checked = e.win;
+    tropfInput().checked = e.tropf;
+
+    document.getElementById("drink").value = e.drink || "05";
+
+    document.getElementById("saveBtn").innerText = "Speichern";
+
+    back();
 }
 
 function del(i){
