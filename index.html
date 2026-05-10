@@ -326,42 +326,10 @@ body.dark #placeModal button {
     box-sizing: border-box;
 }
 
-/* Buttons + Selects einheitlich */
-/* Buttons im Menü bleiben kompakt */
-.settings-menu button {
-    width: 160px;
-}
 
 /* Select soll wie normale Inputs sein */
 .settings-menu select {
     width: 100%;
-}
-
-
-/* Trennungslinien zwischen Elementen */
-.settings-menu button,
-.settings-menu select {
-    border-bottom: 1px solid #eee;
-}
-
-/* letzter Eintrag ohne Linie */
-.settings-menu button:last-child,
-.settings-menu select:last-child {
-    border-bottom: none;
-}
-
-/* Darkmode einheitlich */
-body.dark .settings-menu,
-body.dark .settings-menu button,
-body.dark .settings-menu select {
-    background: #1e1e1e;
-    color: #e5e5ea;
-    border-bottom: 1px solid #333;
-}
-
-.settings-menu {
-    background: #ffffff;
-    color: #000;
 }
 
 /* ALLES im Menü bekommt denselben Hintergrund */
@@ -441,6 +409,42 @@ input,
 button {
     width: 100%;
     box-sizing: border-box;
+}
+
+/* ===== SETTINGS MENU EINHEITLICHE TRENNLINIEN ===== */
+
+.settings-menu {
+    background: #fff;
+}
+
+/* jedes direkte Element bekommt gleiche Trennlinie */
+.settings-menu > button,
+.settings-menu > div,
+.settings-menu > select {
+    border-bottom: 1px solid #e6e6e6;
+}
+
+/* letzte Linie entfernen */
+.settings-menu > *:last-child {
+    border-bottom: none;
+}
+
+/* SECTION (z.B. Standardgetränk Block) */
+.settings-section {
+    padding: 10px;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+/* DARKMODE */
+body.dark .settings-menu {
+    background: #1e1e1e;
+}
+
+body.dark .settings-menu > button,
+body.dark .settings-menu > div,
+body.dark .settings-menu > select,
+body.dark .settings-section {
+    border-bottom: 1px solid #333;
 }
 
 </style>
@@ -1456,6 +1460,9 @@ function managePlaces(){
 
     document.getElementById("placeModal").style.display = "block";
 }
+
+
+
 </script>
 <div id="settingsMenu" class="settings-menu">
 
@@ -1467,7 +1474,7 @@ function managePlaces(){
         Orte bearbeiten
     </button>
 
-    <div style="padding:10px; border-top:1px solid #ccc;">
+    <div class="settings-section">
 
     <div style="font-size:12px; opacity:0.7; margin-bottom:6px;">
         Standardgetränk
