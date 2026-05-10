@@ -55,6 +55,29 @@ body.dark button:active {
     z-index: 2000;
 }
 
+.small-btn.active-default {
+    background: #4caf50;
+    color: white;
+}
+
+.row-select {
+    display: flex;
+    gap: 10px;
+    margin: 6px 0;
+}
+
+.select-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.select-box .label {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-bottom: 4px;
+}
+
 body.dark .win {
     background: #1f3a2a; /* dunkelgrün */
 }
@@ -80,6 +103,13 @@ body.dark .loss-tropf {
     padding: 10px;
     text-align: center;
     box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.small-btn {
+    width: auto;
+    padding: 6px 8px;
+    font-size: 12px;
+    border-radius: 8px;
 }
 
 .dash-value {
@@ -201,6 +231,24 @@ body.dark #placeModal input {
     border: 1px solid #444;
 }
 
+.small-btn {
+    min-width: 90px;
+    text-align: center;
+}
+
+.place-modal-content {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    max-height: 70vh;
+    overflow: auto;
+}
+body.dark .place-modal-content {
+    background: #121212;
+    color: #e5e5ea;
+}
 body.dark #placeModal button {
     background: #2a2a2a;
     color: #e5e5ea;
@@ -234,6 +282,12 @@ body.dark #placeModal button {
 .small {
     font-size: 12px;
     opacity: 0.6;
+}
+
+body.dark .small-btn.active-default {
+    background: #66bb6a;
+    color: white;
+    box-shadow: 0 0 6px rgba(102,187,106,0.6);
 }
 
 label {
@@ -323,15 +377,25 @@ button {
 
 <label><input type="checkbox" id="win"> Gewonnen</label>
 <label><input type="checkbox" id="tropf"> Getropft</label>
-<select id="drink">
-    <option value="05">Bier 0,5</option>
-    <option value="033">Bier 0,33</option>
-    <option value="small">Kein Bier</option>
-</select>
+<div class="row-select">
 
-<select id="place">
-    <option value="">Ort wählen</option>
-</select>
+    <div class="select-box">
+        <div class="label">Getränk:</div>
+        <select id="drink">
+            <option value="05">Bier 0,5</option>
+            <option value="033">Bier 0,33</option>
+            <option value="small">Kein Bier</option>
+        </select>
+    </div>
+
+    <div class="select-box">
+        <div class="label">Ort:</div>
+        <select id="place">
+            <option value="">-</option>
+        </select>
+    </div>
+
+</div>
 
 <button id="saveBtn" onclick="add()">Eintragen</button>
 <button onclick="openV()">Verlauf</button>
@@ -413,6 +477,7 @@ if(!data){
     };
 } else {
     if(!data.places) data.places = [];
+    if(!data.defaultPlace) data.defaultPlace = "";
 }
 
 function adjustE(e, drink){
@@ -1086,21 +1151,23 @@ function refreshPlaces(){
     const placeSelect = document.getElementById("place");
     const filterPlace = document.getElementById("filterPlace");
 
-    if(placeSelect){
+    if (placeSelect) {
 
-        let current = placeSelect.value;
+    let current = placeSelect.value;
 
-        placeSelect.innerHTML =
-            `<option value="">Ort wählen</option>`;
+    placeSelect.innerHTML = `<option value="">-</option>`;
 
-        data.places.forEach(p => {
+    data.places.forEach(p => {
+        placeSelect.innerHTML += `<option value="${p}">${p}</option>`;
+    });
 
-            placeSelect.innerHTML +=
-                `<option value="${p}">${p}</option>`;
-        });
-
+    // IMMER Default setzen (wenn vorhanden)
+    if (data.defaultPlace) {
+        placeSelect.value = data.defaultPlace;
+    } else {
         placeSelect.value = current;
     }
+}
 
     if(filterPlace){
 
@@ -1180,9 +1247,16 @@ function renderPlacesModal(){
         div.style.alignItems = "center";
 
         div.innerHTML = `
-            <span>${p}</span>
-            <button onclick="deletePlace(${i})">✕</button>
-        `;
+    <span>${p}</span>
+    <div style="display:flex; gap:6px;">
+        <button class="small-btn ${data.defaultPlace === p ? "active-default" : ""}"
+            onclick="setDefaultPlace(${i})">
+            Standard
+        </button>
+
+        <button class="small-btn" onclick="deletePlace(${i})">Löschen</button>
+    </div>
+`;
 
         list.appendChild(div);
     });
@@ -1190,6 +1264,23 @@ function renderPlacesModal(){
     input.value = "";
 }
 
+function setDefaultPlace(i){
+    data.defaultPlace = data.places[i];
+    save();
+    renderPlacesModal();
+    refreshPlaces();
+
+    function setDefaultPlace(i){
+    data.defaultPlace = data.places[i];
+    save();
+
+    renderPlacesModal();
+    refreshPlaces();
+
+    // sofort ins Haupt-Dropdown übernehmen
+    document.getElementById("place").value = data.defaultPlace;
+}
+}
 
 function managePlaces(){
 
@@ -1233,15 +1324,7 @@ function managePlaces(){
     justify-content:center;
 ">
 
-    <div style="
-        background: #121212;
-        padding:16px;
-        border-radius:12px;
-        width:90%;
-        max-width:400px;
-        max-height:70vh;
-        overflow:auto;
-    ">
+    <div class="place-modal-content">
 
         <h3>Orte bearbeiten</h3>
 
