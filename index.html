@@ -186,6 +186,32 @@ button:active {
     background: #d1d1d6;
 }
 
+body.dark #placeModal {
+    background: rgba(0,0,0,0.7);
+}
+
+body.dark #placeModal > div {
+    background: #1e1e1e;
+    color: #e5e5ea;
+}
+
+body.dark #placeModal input {
+    background: #2a2a2a;
+    color: #e5e5ea;
+    border: 1px solid #444;
+}
+
+body.dark #placeModal button {
+    background: #2a2a2a;
+    color: #e5e5ea;
+}
+
+#placeModal input,
+#placeModal button {
+    width: 100%;
+    box-sizing: border-box;
+}
+
 .card {
     background: white;
     padding: 12px;
@@ -238,6 +264,12 @@ body.dark .settings-menu {
     width: 160px;
     border-radius: 0;
     margin: 0;
+}
+
+input,
+button {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 </style>
@@ -297,6 +329,10 @@ body.dark .settings-menu {
     <option value="small">Kein Bier</option>
 </select>
 
+<select id="place">
+    <option value="">Ort wählen</option>
+</select>
+
 <button id="saveBtn" onclick="add()">Eintragen</button>
 <button onclick="openV()">Verlauf</button>
 
@@ -353,6 +389,10 @@ body.dark .settings-menu {
         <option value="tropf">Nur Getropft</option>
     </select>
 
+    <select id="filterPlace" onchange="openV()">
+    <option value="all">Alle Orte</option>
+</select>
+
 </div>
 
 <div id="list"></div>
@@ -363,13 +403,17 @@ body.dark .settings-menu {
 
 let chart;
 let editIndex = null;
-let data = JSON.parse(localStorage.getItem("offline_app")) || {
-    g: {
-        w:0,t:0,r:0,win:0,tropf:0,
-        eS:0,eC:0
-    },
-    v:[]
-};
+let data = JSON.parse(localStorage.getItem("offline_app"));
+
+if(!data){
+    data = {
+        g: { w:0,t:0,r:0,win:0,tropf:0, eS:0,eC:0 },
+        places: [],
+        v: []
+    };
+} else {
+    if(!data.places) data.places = [];
+}
 
 function adjustE(e, drink){
     if(e === null || isNaN(e)) return null;
@@ -720,10 +764,17 @@ if(hasError) return;
     }
 
     const newEntry = {
-    w,t,win,tropf,
+    w,
+    t,
+    win,
+    tropf,
+
+    place: document.getElementById("place").value,
+
     drink,
     e,
     eRaw,
+
     time: editIndex !== null
         ? data.v[editIndex].time
         : Date.now()
@@ -769,15 +820,26 @@ function openV(){
     let sortOrder = document.getElementById("sortOrder")?.value || "newest";
     let filter = document.getElementById("filterResult")?.value || "all";
 
+    let placeFilter =
+    document.getElementById("filterPlace")?.value || "all";
+
     let entries = data.v.slice();
 
     // 🔽 Filter
     entries = entries.filter(e => {
-        if(filter === "win") return e.win;
-        if(filter === "loss") return !e.win && !e.tropf;
-        if(filter === "tropf") return e.tropf;
-        return true;
-    });
+
+    if(placeFilter !== "all" && e.place !== placeFilter){
+        return false;
+    }
+
+    if(filter === "win") return e.win;
+
+    if(filter === "loss") return !e.win && !e.tropf;
+
+    if(filter === "tropf") return e.tropf;
+
+    return true;
+});
 
     // 🔄 Sortierung
     entries.sort((a, b) => {
@@ -799,7 +861,7 @@ function openV(){
         e.drink === "033" ? "🍺 Bier 0,33" :
         "🚫 Kein Bier"}
         </span></div>
-
+        <div class="row"><b>Ort</b><span>${e.place || "-"}</span></div>
         <div class="row"><b>Würfe</b><span>${e.w}</span></div>
         <div class="row"><b>Treffer</b><span>${e.t}</span></div>
         <div class="row">
@@ -842,7 +904,7 @@ function editEntry(i){
     tropfInput().checked = e.tropf;
 
     document.getElementById("drink").value = e.drink || "05";
-
+    document.getElementById("place").value = e.place || "";
     document.getElementById("saveBtn").innerText = "Speichern";
 
     back();
@@ -918,7 +980,7 @@ tropfInput().addEventListener("change", () => {
 });
 
 stats();
-
+refreshPlaces();
 if("serviceWorker" in navigator){
     navigator.serviceWorker.register("service-worker.js");
 }
@@ -1019,7 +1081,124 @@ document.addEventListener("click", function(e){
         menu.style.display = "none";
     }
 });
+function refreshPlaces(){
 
+    const placeSelect = document.getElementById("place");
+    const filterPlace = document.getElementById("filterPlace");
+
+    if(placeSelect){
+
+        let current = placeSelect.value;
+
+        placeSelect.innerHTML =
+            `<option value="">Ort wählen</option>`;
+
+        data.places.forEach(p => {
+
+            placeSelect.innerHTML +=
+                `<option value="${p}">${p}</option>`;
+        });
+
+        placeSelect.value = current;
+    }
+
+    if(filterPlace){
+
+        let currentFilter = filterPlace.value;
+
+        filterPlace.innerHTML =
+            `<option value="all">Alle Orte</option>`;
+
+        data.places.forEach(p => {
+
+            filterPlace.innerHTML +=
+                `<option value="${p}">${p}</option>`;
+        });
+
+        filterPlace.value = currentFilter;
+    }
+}
+
+function closePlaces(){
+    document.getElementById("placeModal").style.display = "none";
+}
+
+function savePlaces(){
+
+    let result = document.getElementById("placeModalInput").value;
+
+    data.places = result
+        .split(",")
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+
+    save();
+    refreshPlaces();
+    closePlaces();
+}
+
+function deletePlace(i){
+
+    data.places.splice(i, 1);
+
+    save();
+    renderPlacesModal();
+    refreshPlaces();
+}
+
+function addPlace(){
+
+    let input = document.getElementById("placeModalInput");
+    let val = input.value.trim();
+
+    if(!val) return;
+
+    if(!data.places.includes(val)){
+        data.places.push(val);
+    }
+
+    input.value = "";
+
+    save();
+    renderPlacesModal();
+    refreshPlaces();
+}
+
+function renderPlacesModal(){
+
+    const list = document.getElementById("placeModalList");
+    const input = document.getElementById("placeModalInput");
+
+    list.innerHTML = "";
+
+    data.places.forEach((p, i) => {
+
+        let div = document.createElement("div");
+        div.className = "card";
+        div.style.display = "flex";
+        div.style.justifyContent = "space-between";
+        div.style.alignItems = "center";
+
+        div.innerHTML = `
+            <span>${p}</span>
+            <button onclick="deletePlace(${i})">✕</button>
+        `;
+
+        list.appendChild(div);
+    });
+
+    input.value = "";
+}
+
+
+function managePlaces(){
+
+    if(!data.places) data.places = [];
+
+    renderPlacesModal();
+
+    document.getElementById("placeModal").style.display = "block";
+}
 </script>
 <div class="data-fab">
     <button class="data-btn" onclick="toggleDataMenu()">Daten</button>
@@ -1032,7 +1211,51 @@ document.addEventListener("click", function(e){
     <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
 </div>
 <div id="settingsMenu" class="settings-menu">
-    <button onclick="toggleDark()" id="darkToggleBtn">Darkmode</button>
+
+    <button onclick="toggleDark()" id="darkToggleBtn">
+        Darkmode
+    </button>
+
+    <button onclick="managePlaces()">
+        Orte bearbeiten
+    </button>
+
 </div>
+
+<div id="placeModal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.5);
+    z-index:3000;
+    align-items:center;
+    justify-content:center;
+">
+
+    <div style="
+        background: #121212;
+        padding:16px;
+        border-radius:12px;
+        width:90%;
+        max-width:400px;
+        max-height:70vh;
+        overflow:auto;
+    ">
+
+        <h3>Orte bearbeiten</h3>
+
+        <input id="placeModalInput" placeholder="Neuer Ort">
+
+        <button onclick="addPlace()">Hinzufügen</button>
+
+        <div id="placeModalList" style="margin-top:10px;"></div>
+
+        <button onclick="closePlaces()">Fertig</button>
+
+    </div>
+</div>
+</div>
+
 </body>
 </html>
