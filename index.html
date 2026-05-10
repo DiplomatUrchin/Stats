@@ -594,8 +594,7 @@ function stats(){
 
     let eSum = 0, eCount = 0;
 
-    let loss = 0;
-    let tropfLoss = 0;
+    let tropfCount = 0;
 
     /* ANGEPAST */
     for(let e of filtered){
@@ -605,10 +604,8 @@ function stats(){
         g.r++;
 
         if(e.win) g.win++;
-        else{
-            loss++;
-            if(e.tropf) tropfLoss++;
-        }
+
+if(e.tropf) tropfCount++;
 
         if(e.e !== null && !isNaN(e.e)){
     eSum += e.e;
@@ -626,7 +623,7 @@ function stats(){
         (sg / 100) * 20 +
         (ae > 0 ? (3 / ae) * 40 : 0);
 
-    let tropfQuote = loss ? (tropfLoss / loss * 100) : 0;
+    let tropfQuote = g.r ? (tropfCount / g.r * 100) : 0;
 
 
 // Dashboard aktualisieren
