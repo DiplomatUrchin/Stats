@@ -540,6 +540,10 @@ body.dark .settings-section {
     <option value="day">Pro Tag</option>
 </select>
 
+<select id="filterPlaceHome" onchange="stats()">
+    <option value="all">Alle Orte</option>
+</select>
+
 <select id="graphType" onchange="updateChart()">
     <option value="score">Score</option>
     <option value="hit">Trefferquote</option>
@@ -620,26 +624,42 @@ function getFilteredData(){
     let p = document.getElementById("period").value;
     let now = Date.now();
 
-    if (p === "all") return data.v;
+    let entries = data.v.slice();
 
+    // Zeitraum filtern
     if (p === "custom") {
         let from = document.getElementById("fromDate").value;
         let to = document.getElementById("toDate").value;
 
-        if (!from || !to) return data.v;
+        if (from && to) {
+            let fromTime = new Date(from).getTime();
+            let toTime = new Date(to).getTime() + 24 * 60 * 60 * 1000;
 
-        let fromTime = new Date(from).getTime();
-        let toTime = new Date(to).getTime() + 24 * 60 * 60 * 1000;
+            entries = entries.filter(e =>
+                e.time >= fromTime && e.time <= toTime
+            );
+        }
+    } 
+    else if (p !== "all") {
+        let days = parseInt(p);
+        let ms = days * 24 * 60 * 60 * 1000;
 
-        return data.v.filter(e =>
-            e.time >= fromTime && e.time <= toTime
+        entries = entries.filter(e =>
+            (now - e.time) <= ms
         );
     }
 
-    let days = parseInt(p);
-    let ms = days * 24 * 60 * 60 * 1000;
+    // Ort filtern
+    let placeFilter =
+        document.getElementById("filterPlaceHome")?.value || "all";
 
-    return data.v.filter(e => (now - e.time) <= ms);
+    if (placeFilter !== "all") {
+        entries = entries.filter(e =>
+            e.place === placeFilter
+        );
+    }
+
+    return entries;
 }
 
 function calculateScore(entries){
@@ -1320,6 +1340,7 @@ function refreshPlaces(){
 
     const placeSelect = document.getElementById("place");
     const filterPlace = document.getElementById("filterPlace");
+    const filterPlaceHome = document.getElementById("filterPlaceHome");
 
     if (placeSelect) {
 
@@ -1354,6 +1375,21 @@ function refreshPlaces(){
 
         filterPlace.value = currentFilter;
     }
+
+    if(filterPlaceHome){
+
+    let currentHomeFilter = filterPlaceHome.value;
+
+    filterPlaceHome.innerHTML =
+        `<option value="all">Alle Orte</option>`;
+
+    data.places.forEach(p => {
+        filterPlaceHome.innerHTML +=
+            `<option value="${p}">${p}</option>`;
+    });
+
+    filterPlaceHome.value = currentHomeFilter || "all";
+}
 }
 
 function closePlaces(){
