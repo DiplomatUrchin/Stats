@@ -1078,7 +1078,20 @@ function openV(){
             : b.time - a.time;
     });
 
-    entries.forEach((e)=>{
+    // Für den Vergleich immer die tatsächlich vorherige Runde suchen
+    let chronological = data.v.slice().sort((a, b) => a.time - b.time);
+
+    entries.forEach((e, index)=>{
+
+        let originalIndex = data.v.indexOf(e);
+
+        let chronologicalIndex = chronological.indexOf(e);
+        let previous = chronologicalIndex > 0
+            ? chronological[chronologicalIndex - 1]
+            : null;
+
+        let score = getEntryScore(e);
+        let previousScore = previous ? getEntryScore(previous) : null;
 
         let div = document.createElement("div");
         div.className = "card " + (e.win ? "win" : (e.tropf ? "loss-tropf" : "loss"));
@@ -1092,18 +1105,49 @@ function openV(){
         "🚫 Kein Bier"}
         </span></div>
         <div class="row"><b>Ort</b><span>${e.place || "-"}</span></div>
-        <div class="row"><b>Würfe</b><span>${e.w}</span></div>
-        <div class="row"><b>Treffer</b><span>${e.t}</span></div>
         <div class="row">
-        <b>Leer nach</b>
-        <span>
-            ${e.eRaw ?? "-"}
-            ${e.eRaw !== null && e.eRaw !== undefined ? " → " + e.e : ""}
-        </span>
-        </div>
+    <b>Würfe</b>
+    <span>
+        ${e.w}
+        ${previous ? changeText(e.w, previous.w) : ""}
+    </span>
+</div>
+
+<div class="row">
+    <b>Treffer</b>
+    <span>
+        ${e.t}
+        ${previous ? changeText(e.t, previous.t) : ""}
+    </span>
+</div>
+        <div class="row">
+    <b>Leer nach</b>
+    <span>
+        ${e.eRaw ?? "-"}
+        ${e.eRaw !== null && e.eRaw !== undefined ? " → " + e.e : ""}
+        ${
+            previous &&
+            e.e !== null &&
+            e.e !== undefined &&
+            previous.e !== null &&
+            previous.e !== undefined
+            ? changeText(e.e, previous.e, 2)
+            : ""
+        }
+    </span>
+</div>
 
         <div class="row"><b>Ergebnis</b><span>${e.win ? "Gewonnen" : "Verloren"}</span></div>
         <div class="row"><b>Getropft</b><span>${e.tropf ? "Ja" : "Nein"}</span></div>
+        <div class="row">
+    <b>Score</b>
+    <span>
+        ${score.toFixed(1)}
+        ${previousScore !== null
+            ? changeText(score, previousScore, 1)
+            : ""}
+    </span>
+</div>
 
         <div style="display:flex; gap:8px; margin-top:8px;">
     <button onclick="editEntry(${data.v.indexOf(e)})">Bearbeiten</button>
@@ -1115,6 +1159,42 @@ function openV(){
     });
 }
 
+
+function getEntryScore(e){
+    let tr = e.w ? (e.t / e.w * 100) : 0;
+    let sg = e.win ? 100 : 0;
+    let ae = (e.e !== null && e.e !== undefined && !isNaN(e.e)) ? e.e : 0;
+
+    return (
+        (tr / 100) * 40 +
+        (sg / 100) * 20 +
+        (ae > 0 ? (3 / ae) * 40 : 0)
+    );
+}
+
+function changeText(current, previous, decimals = 0){
+    if(previous === null || previous === undefined){
+        return "";
+    }
+
+    let diff = current - previous;
+
+    if(decimals > 0){
+        diff = diff.toFixed(decimals);
+    } else {
+        diff = Math.round(diff);
+    }
+
+    if(diff > 0){
+        return `<span style="color:green;">(+${diff})</span>`;
+    }
+
+    if(diff < 0){
+        return `<span style="color:red;">(${diff})</span>`;
+    }
+
+    return `<span style="opacity:0.5;">(±0)</span>`;
+}
 function editEntry(i){
 
     const e = data.v[i];
