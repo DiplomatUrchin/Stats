@@ -1,4 +1,4 @@
-const CACHE_NAME = "statistik-app-v11.5";
+const CACHE_NAME = "statistik-app-v11.6";
 
 // Dateien, die wirklich gecached werden sollen
 const ASSETS = [
