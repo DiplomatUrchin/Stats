@@ -1089,102 +1089,213 @@ function openV(){
     let list = document.getElementById("list");
     list.innerHTML = "";
 
-    let sortOrder = document.getElementById("sortOrder")?.value || "newest";
-    let filter = document.getElementById("filterResult")?.value || "all";
+    let sortOrder =
+        document.getElementById("sortOrder")?.value || "newest";
+
+    let filter =
+        document.getElementById("filterResult")?.value || "all";
 
     let placeFilter =
-    document.getElementById("filterPlace")?.value || "all";
+        document.getElementById("filterPlace")?.value || "all";
 
-    let entries = data.v.slice();
 
-    // 🔽 Filter
-    entries = entries.filter(e => {
+    // =========================================================
+    // ALLE RUNDEN chronologisch sortieren
+    // Damit kann der Score nach jeder Runde korrekt
+    // als Gesamtscore berechnet werden.
+    // =========================================================
 
-    if(placeFilter !== "all" && e.place !== placeFilter){
-        return false;
-    }
+    let allEntries = data.v.slice();
 
-    if(filter === "win") return e.win;
+    allEntries.sort((a, b) => a.time - b.time);
 
-    if(filter === "loss") return !e.win && !e.tropf;
 
-    if(filter === "tropf") return e.tropf;
+    // =========================================================
+    // Kumulierten Score nach jeder Runde berechnen
+    // =========================================================
 
-    return true;
-});
+    let cumulativeScores = [];
+    let temp = [];
 
-    // 🔄 Sortierung
-    entries.sort((a, b) => {
-        return sortOrder === "oldest"
-            ? a.time - b.time
-            : b.time - a.time;
+    allEntries.forEach((e, index) => {
+
+        temp.push(e);
+
+        cumulativeScores[index] = calculateScore(temp);
     });
 
-    entries.forEach((e, index)=>{
 
-           const currentScore = getEntryScore(e);
+    // =========================================================
+    // Angezeigte Einträge filtern
+    // =========================================================
 
-let scoreChange = null;
+    let entries = allEntries.filter(e => {
 
-if(sortOrder === "newest"){
-    // Bei "Neueste zuerst" ist der nächste Eintrag älter.
-    if(index < entries.length - 1){
-        const olderScore = getEntryScore(entries[index + 1]);
-        scoreChange = currentScore - olderScore;
+        if(placeFilter !== "all" && e.place !== placeFilter){
+            return false;
+        }
+
+        if(filter === "win"){
+            return e.win;
+        }
+
+        if(filter === "loss"){
+            return !e.win && !e.tropf;
+        }
+
+        if(filter === "tropf"){
+            return e.tropf;
+        }
+
+        return true;
+    });
+
+
+    // =========================================================
+    // Sortierung für die Anzeige
+    // =========================================================
+
+    if(sortOrder === "newest"){
+        entries.reverse();
     }
-} else {
-    // Bei "Älteste zuerst" ist der vorherige Eintrag älter.
-    if(index > 0){
-        const olderScore = getEntryScore(entries[index - 1]);
-        scoreChange = currentScore - olderScore;
-    }
-}
 
+
+    // =========================================================
+    // Karten erstellen
+    // =========================================================
+
+    entries.forEach((e) => {
+
+        // Position dieser Runde in der chronologischen Gesamtliste
+        const chronologicalIndex =
+            allEntries.indexOf(e);
+
+
+        // Der tatsächlich erreichte Gesamtscore NACH dieser Runde
+        const currentScore =
+            cumulativeScores[chronologicalIndex];
+
+
+        // Score vor dieser Runde
+        let previousScore = null;
+
+        if(chronologicalIndex > 0){
+            previousScore =
+                cumulativeScores[chronologicalIndex - 1];
+        }
+
+
+        // Veränderung durch genau diese Runde
+        let scoreChange = null;
+
+        if(previousScore !== null){
+            scoreChange = currentScore - previousScore;
+        }
 
 
         let div = document.createElement("div");
-        div.className = "card " + (e.win ? "win" : (e.tropf ? "loss-tropf" : "loss"));
+
+        div.className =
+            "card " +
+            (e.win
+                ? "win"
+                : (e.tropf ? "loss-tropf" : "loss"));
+
 
         div.innerHTML = `
-        <div class="small">${new Date(e.time).toLocaleDateString("de-DE")}</div>
+            <div class="small">
+                ${new Date(e.time).toLocaleDateString("de-DE")}
+            </div>
 
-        <div class="row"><b>Getränk</b><span>
-        ${e.drink === "05" ? "🍺 Bier 0,5" :
-        e.drink === "033" ? "🍺 Bier 0,33" :
-        "🚫 Kein Bier"}
-        </span></div>
-        <div class="row"><b>Ort</b><span>${e.place || "-"}</span></div>
-        <div class="row"><b>Würfe</b><span>${e.w}</span></div>
-        <div class="row"><b>Treffer</b><span>${e.t}</span></div>
-        <div class="row">
-        <b>Leer nach</b>
-        <span>
-            ${e.eRaw ?? "-"}
-            ${e.eRaw !== null && e.eRaw !== undefined ? " → " + e.e : ""}
-        </span>
-        </div>
+            <div class="row">
+                <b>Getränk</b>
+                <span>
+                    ${
+                        e.drink === "05"
+                            ? "🍺 Bier 0,5"
+                            : e.drink === "033"
+                                ? "🍺 Bier 0,33"
+                                : "🚫 Kein Bier"
+                    }
+                </span>
+            </div>
 
-                <div class="row"> 
-    <b>Score</b> 
-    <span> 
-        ${currentScore.toFixed(1)} 
-        ${
-            scoreChange === null
-            ? ""
-            : ` <span style="color:${scoreChange > 0 ? "green" : scoreChange < 0 ? "red" : "inherit"};">
-                (${formatScoreChange(scoreChange)})
-              </span>`
-        } 
-    </span> 
-</div>
+            <div class="row">
+                <b>Ort</b>
+                <span>${e.place || "-"}</span>
+            </div>
 
-        <div class="row"><b>Ergebnis</b><span>${e.win ? "Gewonnen" : "Verloren"}</span></div>
-        <div class="row"><b>Getropft</b><span>${e.tropf ? "Ja" : "Nein"}</span></div>
+            <div class="row">
+                <b>Würfe</b>
+                <span>${e.w}</span>
+            </div>
 
-        <div style="display:flex; gap:8px; margin-top:8px;">
-    <button onclick="editEntry(${data.v.indexOf(e)})">Bearbeiten</button>
-    <button onclick="del(${data.v.indexOf(e)})">Löschen</button>
-</div>
+            <div class="row">
+                <b>Treffer</b>
+                <span>${e.t}</span>
+            </div>
+
+            <div class="row">
+                <b>Leer nach</b>
+                <span>
+                    ${e.eRaw ?? "-"}
+                    ${
+                        e.eRaw !== null &&
+                        e.eRaw !== undefined
+                            ? " → " + e.e
+                            : ""
+                    }
+                </span>
+            </div>
+
+            <div class="row">
+                <b>Score</b>
+                <span>
+                    ${currentScore.toFixed(1)}
+
+                    ${
+                        scoreChange === null
+                            ? ""
+                            : `
+                                <span style="
+                                    color:${
+                                        scoreChange > 0
+                                            ? "green"
+                                            : scoreChange < 0
+                                                ? "red"
+                                                : "inherit"
+                                    };
+                                ">
+                                    (${formatScoreChange(scoreChange)})
+                                </span>
+                            `
+                    }
+                </span>
+            </div>
+
+            <div class="row">
+                <b>Ergebnis</b>
+                <span>
+                    ${e.win ? "Gewonnen" : "Verloren"}
+                </span>
+            </div>
+
+            <div class="row">
+                <b>Getropft</b>
+                <span>
+                    ${e.tropf ? "Ja" : "Nein"}
+                </span>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button onclick="editEntry(${data.v.indexOf(e)})">
+                    Bearbeiten
+                </button>
+
+                <button onclick="del(${data.v.indexOf(e)})">
+                    Löschen
+                </button>
+            </div>
         `;
 
         list.appendChild(div);
