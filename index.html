@@ -1040,6 +1040,48 @@ function setDefaultDrink(){
     data.defaultDrink || "05";
 }
 
+function getEntryScore(e){
+
+    const w = Number(e.w) || 0;
+    const t = Number(e.t) || 0;
+
+    const trefferquote = w > 0 ? (t / w) * 100 : 0;
+    const siegquote = e.win ? 100 : 0;
+
+    let leer = Number(e.e);
+
+    if(e.eRaw !== undefined && e.eRaw !== null){
+        leer = adjustE(Number(e.eRaw), e.drink);
+    }
+
+    const score =
+        (trefferquote / 100) * 40 +
+        (siegquote / 100) * 20 +
+        (leer > 0 ? (3 / leer) * 40 : 0);
+
+    return score;
+}
+
+function formatScoreChange(change){
+    if(change === null) return "";
+
+    let abs = Math.abs(change);
+
+    // Unter 1: bis zu 3 Nachkommastellen
+    let decimals = abs < 1 ? 3 : 1;
+
+    let formatted = change.toFixed(decimals);
+
+    // Überflüssige Nullen bei Werten unter 1 entfernen
+    if(abs < 1){
+        formatted = parseFloat(formatted).toString();
+    }
+
+    let sign = change > 0 ? "+" : "";
+
+    return sign + formatted;
+}
+
 function openV(){
 
     page("verlauf");
@@ -1078,7 +1120,27 @@ function openV(){
             : b.time - a.time;
     });
 
-    entries.forEach((e)=>{
+    entries.forEach((e, index)=>{
+
+           const currentScore = getEntryScore(e);
+
+let scoreChange = null;
+
+if(sortOrder === "newest"){
+    // Bei "Neueste zuerst" ist der nächste Eintrag älter.
+    if(index < entries.length - 1){
+        const olderScore = getEntryScore(entries[index + 1]);
+        scoreChange = currentScore - olderScore;
+    }
+} else {
+    // Bei "Älteste zuerst" ist der vorherige Eintrag älter.
+    if(index > 0){
+        const olderScore = getEntryScore(entries[index - 1]);
+        scoreChange = currentScore - olderScore;
+    }
+}
+
+
 
         let div = document.createElement("div");
         div.className = "card " + (e.win ? "win" : (e.tropf ? "loss-tropf" : "loss"));
@@ -1101,6 +1163,20 @@ function openV(){
             ${e.eRaw !== null && e.eRaw !== undefined ? " → " + e.e : ""}
         </span>
         </div>
+
+                <div class="row"> 
+    <b>Score</b> 
+    <span> 
+        ${currentScore.toFixed(1)} 
+        ${
+            scoreChange === null
+            ? ""
+            : ` <span style="color:${scoreChange > 0 ? "green" : scoreChange < 0 ? "red" : "inherit"};">
+                (${formatScoreChange(scoreChange)})
+              </span>`
+        } 
+    </span> 
+</div>
 
         <div class="row"><b>Ergebnis</b><span>${e.win ? "Gewonnen" : "Verloren"}</span></div>
         <div class="row"><b>Getropft</b><span>${e.tropf ? "Ja" : "Nein"}</span></div>
