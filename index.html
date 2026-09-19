@@ -527,6 +527,7 @@ button {
     border-bottom: 1px solid #e6e6e6;
 }
 
+
 /* DARKMODE */
 body.dark .settings-menu {
     background: #1e1e1e;
@@ -539,6 +540,235 @@ body.dark .settings-section {
     border-bottom: 1px solid #333;
 }
 
+.win-streak-fire {
+    display: inline-block;
+    margin-left: 6px;
+    animation: firePulse 0.8s ease-in-out infinite alternate;
+    transform-origin: center bottom;
+}
+
+@keyframes firePulse {
+    from {
+        transform: scale(1) rotate(-3deg);
+    }
+    to {
+        transform: scale(1.18) rotate(3deg);
+    }
+}
+
+/* ===== ABZEICHEN ===== */
+
+/* ===== ABZEICHEN ===== */
+
+.badge-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.65);
+    z-index:1000;
+    align-items:center;
+    justify-content:center;
+    padding:15px;
+}
+
+.badge-content{
+    width:min(760px,100%);
+    max-height:85vh;
+    overflow-y:auto;
+    background:#ffffff;
+    color:#000000;
+    border-radius:18px;
+    padding:16px;
+    box-sizing:border-box;
+}
+
+.badge-content h3{
+    margin:0 0 15px 0;
+}
+
+#badgeList{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+}
+
+.badge-card{
+    min-width:0;
+    text-align:center;
+    padding:8px 4px;
+    box-sizing:border-box;
+}
+
+.badge-circle{
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    margin:0 auto 7px auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:25px;
+}
+
+.badge-circle.bronze{
+    background:#CD7F32;
+}
+
+.badge-circle.silver{
+    background:#A8A8A8;
+}
+
+.badge-circle.gold{
+    background:#D4AF37;
+}
+
+.badge-circle.diamond{
+    background:#8DE7FF;
+}
+
+.badge-title{
+    font-size:11px;
+    font-weight:700;
+    line-height:1.2;
+    margin-top:4px;
+}
+
+.badge-description{
+    font-size:9px;
+    line-height:1.25;
+    margin-top:3px;
+    opacity:0.65;
+}
+
+.badge-locked{
+    opacity:0.45;
+}
+
+body.dark .badge-content{
+    background:#1e1e1e;
+    color:#e5e5ea;
+}
+
+body.dark .badge-circle.bronze{
+    background:#753126;
+}
+
+body.dark .badge-circle.silver{
+    background:#A8A8A8;
+}
+
+body.dark .badge-circle.gold{
+    background:#DBB300;
+}
+
+body.dark .badge-circle.diamond{
+    background:#00A4DB;
+}
+
+.badge-circle.locked{
+    background:#d1d1d1;
+}
+
+body.dark .badge-circle.locked{
+    background:#3a3a3a;
+}
+
+@media (max-width:500px){
+
+    #badgeList{
+        grid-template-columns:repeat(3,1fr);
+        gap:8px;
+    }
+
+    .badge-circle{
+        width:50px;
+        height:50px;
+        font-size:24px;
+    }
+
+    .badge-title{
+        font-size:10px;
+    }
+
+    .badge-description{
+        font-size:8px;
+    }
+}
+
+
+/* ===== MOBILE ===== */
+
+@media (max-width:500px){
+
+    #badgeList{
+        grid-template-columns:repeat(3,1fr);
+        gap:6px;
+    }
+
+    .badge-card{
+        padding:7px 3px;
+    }
+
+    .badge-emoji{
+        font-size:21px;
+    }
+
+    .badge-title{
+        font-size:10px;
+    }
+
+    .badge-description{
+        font-size:8px;
+    }
+
+    .badge-circle{
+        width:36px;
+        height:36px;
+    }
+
+    .badge-circle-content{
+        width:29px;
+        height:29px;
+    }
+
+    .badge-circle-value{
+        font-size:7px;
+    }
+}
+
+@media (max-width:500px){
+    #badgeList{
+        grid-template-columns:repeat(3,1fr);
+        gap:6px;
+    }
+
+    .badge-card{
+        padding:7px 3px;
+    }
+
+    .badge-emoji{
+        font-size:21px;
+    }
+
+    .badge-title{
+        font-size:10px;
+    }
+
+    .badge-description{
+        font-size:8px;
+    }
+
+    .badge-circle{
+        width:40px;
+        height:40px;
+    }
+
+    .badge-circle-content{
+        width:32px;
+        height:32px;
+    }
+}
+
 </style>
 </head>
 
@@ -547,21 +777,40 @@ body.dark .settings-section {
 <button class="dark-toggle" onclick="toggleSettingsMenu()">⚙️</button>
 <h2>Statistik</h2>
 <div id="pinnedScoreGoal"></div>
-<div id="dashboard" class="dashboard">
 
-    <div class="dash-card">
-        <div class="dash-value" id="dScore">0</div>
-        <div class="dash-label">Score</div>
+<div id="dashboard">
+
+    <div class="dashboard">
+        
+        <div class="dash-card">
+            <div class="dash-value" id="dCurrentWinStreak">-</div>
+            <div class="dash-label">Aktuelle Siegesstreak</div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-value" id="dLongestWinStreak">0</div>
+            <div class="dash-label">Längste Siegesstreak</div>
+        </div>
+
     </div>
 
-    <div class="dash-card">
-        <div class="dash-value" id="dHit">0%</div>
-        <div class="dash-label">Treffer</div>
-    </div>
+    <div class="dashboard">
 
-    <div class="dash-card">
-        <div class="dash-value" id="dWin">0%</div>
-        <div class="dash-label">Siege</div>
+        <div class="dash-card">
+            <div class="dash-value" id="dScore">0</div>
+            <div class="dash-label">Score</div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-value" id="dHit">0%</div>
+            <div class="dash-label">Treffer</div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-value" id="dWin">0%</div>
+            <div class="dash-label">Siege</div>
+        </div>
+
     </div>
 
 </div>
@@ -1527,6 +1776,325 @@ if(e.tropf) tropfCount++;
     });
 }
 
+function calculateWinStreaks(){
+    const entries = [...data.v].sort((a, b) => {
+        return new Date(a.time) - new Date(b.time);
+    });
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+
+    for(const entry of entries){
+        if(entry.win){
+            currentStreak++;
+            if(currentStreak > longestStreak){
+                longestStreak = currentStreak;
+            }
+        }else{
+            currentStreak = 0;
+        }
+    }
+
+    return {
+        current: currentStreak,
+        longest: longestStreak
+    };
+}
+
+
+
+function openBadges(){
+    document.getElementById("badgeModal").style.display = "flex";
+    renderBadges();
+}
+
+function closeBadges(){
+    document.getElementById("badgeModal").style.display = "none";
+}
+
+function getPerfectRoundCount(){
+    let count = 0;
+
+    for(const entry of data.v){
+
+        if(!entry.win) continue;
+        if(entry.tropf) continue;
+
+        if(entry.w <= 0) continue;
+
+        const hitQuote = (entry.t / entry.w) * 100;
+
+        if(hitQuote !== 100) continue;
+
+        if(entry.e === null || entry.e === undefined) continue;
+
+        if(entry.e > 3) continue;
+
+        count++;
+    }
+
+    return count;
+}
+
+function getBadgeLevel(value, levels){
+    let level = 0;
+
+    for(let i = 0; i < levels.length; i++){
+        if(value >= levels[i]){
+            level = i + 1;
+        }
+    }
+
+    return level;
+}
+
+function getBadgeProgress(value, levels){
+    const level = getBadgeLevel(value, levels);
+
+    if(level >= levels.length){
+        return {
+            level: level,
+            current: levels[levels.length - 1],
+            next: levels[levels.length - 1],
+            progress: 1,
+            completed: true
+        };
+    }
+
+    const previous = level === 0 ? 0 : levels[level - 1];
+    const next = levels[level];
+
+    const progress = Math.max(
+        0,
+        Math.min(
+            (value - previous) / (next - previous),
+            1
+        )
+    );
+
+    return {
+        level: level,
+        current: value,
+        next: next,
+        progress: progress,
+        completed: false
+    };
+}
+
+function getBadgeLevelName(level){
+    if(level === 1) return "Bronze";
+    if(level === 2) return "Silber";
+    if(level === 3) return "Gold";
+    if(level === 4) return "Diamant";
+    return "Noch nicht erreicht";
+}
+
+function renderBadgeCard(title, description, value, levels, unit){
+    const info = getBadgeProgress(value, levels);
+
+    let displayValue = value;
+
+    if(info.completed){
+        displayValue = levels[levels.length - 1];
+    }
+
+    const degrees = info.progress * 360;
+
+    let text;
+
+    if(info.completed){
+        text = "Alle Stufen erreicht";
+    }else{
+        text = "Noch " + Math.max(0, info.next - value) + " " + unit + " bis " + getBadgeLevelName(info.level + 1);
+    }
+
+    return `
+        <div class="badge-card">
+            <div class="badge-title">${title}</div>
+
+            <div class="badge-description">
+                ${description}
+            </div>
+
+            <div
+                class="badge-circle"
+                style="
+                    background:
+                    conic-gradient(
+                        #4caf50 ${degrees}deg,
+                        #d9d9de ${degrees}deg
+                    );
+                "
+            >
+                <div class="badge-circle-content">
+                    <div class="badge-circle-value">
+                        ${displayValue}
+                    </div>
+
+                    <div class="badge-circle-label">
+                        ${unit}
+                    </div>
+                </div>
+            </div>
+
+            <div class="badge-level">
+                ${getBadgeLevelName(info.level)}
+            </div>
+
+            <div class="badge-description-small">
+                ${text}
+            </div>
+        </div>
+    `;
+}
+
+function renderBadges(){
+    const list = document.getElementById("badgeList");
+    if(!list) return;
+
+    const streaks = calculateWinStreaks();
+
+    const totalRounds = data.v.length;
+
+    const perfectRounds = data.v.filter(e => {
+    const hitRate = e.w > 0 ? (e.t / e.w) * 100 : 0;
+    const emptyAverage = e.e;
+
+    return (
+        hitRate >= 100 &&
+        e.win === true &&
+        emptyAverage !== null &&
+        emptyAverage <= 3
+    );
+}).length;
+
+let roundsTier = "locked";
+let roundsTarget = 50;
+let roundsNext = 50 - totalRounds;
+
+if(totalRounds >= 500){
+    roundsTier = "diamond";
+    roundsTarget = 500;
+    roundsNext = 0;
+}else if(totalRounds >= 250){
+    roundsTier = "gold";
+    roundsTarget = 250;
+    roundsNext = 500 - totalRounds;
+}else if(totalRounds >= 100){
+    roundsTier = "silver";
+    roundsTarget = 100;
+    roundsNext = 250 - totalRounds;
+}else if(totalRounds >= 50){
+    roundsTier = "bronze";
+    roundsTarget = 50;
+    roundsNext = 100 - totalRounds;
+}
+
+let streakTier = "locked";
+let streakTarget = 3;
+let streakNext = 3 - streaks.longest;
+
+if(streaks.longest >= 20){
+    streakTier = "diamond";
+    streakTarget = 20;
+    streakNext = 0;
+}else if(streaks.longest >= 10){
+    streakTier = "gold";
+    streakTarget = 10;
+    streakNext = 20 - streaks.longest;
+}else if(streaks.longest >= 5){
+    streakTier = "silver";
+    streakTarget = 5;
+    streakNext = 10 - streaks.longest;
+}else if(streaks.longest >= 3){
+    streakTier = "bronze";
+    streakTarget = 3;
+    streakNext = 5 - streaks.longest;
+}
+
+let perfectTier = "locked";
+let perfectTarget = 1;
+let perfectNext = 1 - perfectRounds;
+
+if(perfectRounds >= 25){
+    perfectTier = "diamond";
+    perfectTarget = 25;
+    perfectNext = 0;
+}else if(perfectRounds >= 10){
+    perfectTier = "gold";
+    perfectTarget = 10;
+    perfectNext = 25 - perfectRounds;
+}else if(perfectRounds >= 5){
+    perfectTier = "silver";
+    perfectTarget = 5;
+    perfectNext = 10 - perfectRounds;
+}else if(perfectRounds >= 1){
+    perfectTier = "bronze";
+    perfectTarget = 1;
+    perfectNext = 5 - perfectRounds;
+}
+
+    list.innerHTML = `
+
+       <div class="badge-card">
+    <div class="badge-circle ${roundsTier}">
+        🍺
+    </div>
+
+    <div class="badge-title">
+        Spiele ${roundsTarget} Runden
+    </div>
+
+    <div class="badge-description">
+        ${
+            roundsNext === 0
+                ? "Diamant erreicht"
+                : `${roundsNext} bis zum nächsten Badge`
+        }
+    </div>
+</div>
+
+
+        <div class="badge-card">
+    <div class="badge-circle ${streakTier}">
+        🔥
+    </div>
+
+    <div class="badge-title">
+        Habe eine Siegesstreak von ${streakTarget}
+    </div>
+
+    <div class="badge-description">
+        ${
+            streakNext === 0
+                ? "Diamant erreicht"
+                : `${streakNext} bis zum nächsten Badge`
+        }
+    </div>
+</div>
+
+
+      <div class="badge-card">
+    <div class="badge-circle ${perfectTier}">
+        💯
+    </div>
+
+    <div class="badge-title">
+        Habe ${perfectTarget} perfekte Runden
+    </div>
+
+    <div class="badge-description">
+        ${
+            perfectNext === 0
+                ? "Diamant erreicht"
+                : `${perfectNext} bis zum nächsten Badge`
+        }
+    </div>
+</div>
+
+    `;
+}
+
 function stats(){
 
     let g = {
@@ -1590,6 +2158,23 @@ document.getElementById("dWin").innerText = sg.toFixed(0) + "%";
 document.getElementById("dAvgEmpty").innerText = ae.toFixed(2);
 document.getElementById("dTropf").innerText = tropfQuote.toFixed(0) + "%";
 document.getElementById("dRounds").innerText = g.r;
+
+const streaks = calculateWinStreaks();
+
+const currentStreakElement = document.getElementById("dCurrentWinStreak");
+const longestStreakElement = document.getElementById("dLongestWinStreak");
+
+if(currentStreakElement){
+    currentStreakElement.innerHTML =
+        streaks.current >= 2
+            ? streaks.current + ' Siege <span class="win-streak-fire">🔥</span>'
+            : "-";
+}
+
+if(longestStreakElement){
+    longestStreakElement.textContent =
+        streaks.longest + (streaks.longest === 1 ? " Sieg" : " Siege");
+}
 
     updateChart();
 }
@@ -1696,6 +2281,7 @@ if(editIndex !== null){
 save();
 stats();
 renderScoreGoals();
+renderBadges();
 clear();
 }
 
@@ -2040,10 +2626,11 @@ function del(i){
 
     data.v.splice(i,1);
 
-    save();
+save();
 stats();
 renderScoreGoals();
 renderPinnedScoreGoal();
+renderBadges();
 openV();
 }
 
@@ -2397,6 +2984,10 @@ function managePlaces(){
     Score-Ziele
 </button>
 
+<button onclick="openBadges()">
+    Abzeichen
+</button>
+
     <div class="settings-section">
 
     <div style="font-size:12px; opacity:0.7; margin-bottom:6px;">
@@ -2469,6 +3060,22 @@ function managePlaces(){
         </button>
 
     </div>
+</div>
+
+<div id="badgeModal" class="badge-modal">
+
+    <div class="badge-content">
+
+        <h3>Abzeichen</h3>
+
+        <div id="badgeList"></div>
+
+        <button onclick="closeBadges()">
+            Fertig
+        </button>
+
+    </div>
+
 </div>
 
 <div id="placeModal" style="
