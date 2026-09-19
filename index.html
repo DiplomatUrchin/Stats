@@ -673,6 +673,101 @@ body.dark .badge-circle.locked{
     background:#3a3a3a;
 }
 
+.badge-card{
+    cursor:pointer;
+}
+
+.badge-card:active{
+    transform:scale(0.96);
+}
+
+.badge-detail-content{
+    max-width:420px;
+    text-align:center;
+}
+
+.badge-back-button{
+    display:block;
+    margin-bottom:15px;
+    padding:8px 12px;
+    border:0;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.badge-detail-title{
+    font-size:20px;
+    font-weight:700;
+    margin-bottom:15px;
+}
+
+.badge-detail-stages{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin:15px 0 20px 0;
+}
+
+.badge-detail-stage{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+    cursor:pointer;
+}
+
+.badge-detail-stage .badge-circle{
+    width:45px;
+    height:45px;
+    font-size:22px;
+}
+
+.badge-detail-stage.locked{
+    opacity:0.55;
+}
+
+.badge-detail-stage.active{
+    transform:scale(1.08);
+}
+
+.badge-detail-description{
+    font-size:14px;
+    line-height:1.4;
+    margin-bottom:15px;
+}
+
+.badge-app-icon-button{
+    width:100%;
+    padding:12px;
+    border:0;
+    border-radius:12px;
+    background:#007aff;
+    color:white;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.badge-app-icon-button:active{
+    transform:scale(0.98);
+}
+
+.badge-app-icon-status{
+    font-size:12px;
+    margin-top:10px;
+    opacity:0.7;
+}
+
+body.dark .badge-back-button{
+    background:#2a2a2a;
+    color:#e5e5ea;
+}
+
+body.dark .badge-app-icon-button{
+    background:#007aff;
+    color:white;
+}
+
 @media (max-width:500px){
 
     #badgeList{
@@ -2036,7 +2131,7 @@ if(perfectRounds >= 25){
 
     list.innerHTML = `
 
-       <div class="badge-card">
+       <div class="badge-card" onclick="openBadgeDetail('rounds')">
     <div class="badge-circle ${roundsTier}">
         🍺
     </div>
@@ -2055,7 +2150,7 @@ if(perfectRounds >= 25){
 </div>
 
 
-        <div class="badge-card">
+        <div class="badge-card" onclick="openBadgeDetail('streak')">
     <div class="badge-circle ${streakTier}">
         🔥
     </div>
@@ -2074,7 +2169,7 @@ if(perfectRounds >= 25){
 </div>
 
 
-      <div class="badge-card">
+      <div class="badge-card" onclick="openBadgeDetail('perfect')">
     <div class="badge-circle ${perfectTier}">
         💯
     </div>
@@ -2281,7 +2376,9 @@ if(editIndex !== null){
 save();
 stats();
 renderScoreGoals();
+renderPinnedScoreGoal();
 renderBadges();
+restoreSelectedBadgeIcon();
 clear();
 }
 
@@ -2967,6 +3064,450 @@ function managePlaces(){
     document.getElementById("placeModal").style.display = "block";
 }
 
+let selectedBadgeCategory = null;
+
+let selectedBadgeStage = null;
+
+function openBadgeDetail(category){
+
+    selectedBadgeCategory = category;
+
+    const modal = document.getElementById("badgeDetailModal");
+
+    if(!modal) return;
+
+    renderBadgeDetail();
+
+    modal.style.display = "flex";
+}
+
+function closeBadgeDetail(){
+
+    const modal = document.getElementById("badgeDetailModal");
+
+    if(!modal) return;
+
+    modal.style.display = "none";
+
+    selectedBadgeCategory = null;
+    selectedBadgeStage = null;
+}
+
+function getBadgeStages(category){
+
+    if(category === "rounds"){
+        return [
+            {tier:"bronze", target:50, emoji:"🍺"},
+            {tier:"silver", target:100, emoji:"🍺"},
+            {tier:"gold", target:250, emoji:"🍺"},
+            {tier:"diamond", target:500, emoji:"🍺"}
+        ];
+    }
+
+    if(category === "streak"){
+        return [
+            {tier:"bronze", target:3, emoji:"🔥"},
+            {tier:"silver", target:5, emoji:"🔥"},
+            {tier:"gold", target:10, emoji:"🔥"},
+            {tier:"diamond", target:20, emoji:"🔥"}
+        ];
+    }
+
+    if(category === "perfect"){
+        return [
+            {tier:"bronze", target:1, emoji:"💯"},
+            {tier:"silver", target:5, emoji:"💯"},
+            {tier:"gold", target:10, emoji:"💯"},
+            {tier:"diamond", target:25, emoji:"💯"}
+        ];
+    }
+
+    return [];
+}
+
+function getBadgeCurrentValue(category){
+
+    if(category === "rounds"){
+        return data.v.length;
+    }
+
+    if(category === "streak"){
+        const streaks = calculateWinStreaks();
+        return streaks.longest;
+    }
+
+    if(category === "perfect"){
+
+        return data.v.filter(e => {
+
+            const hitRate = e.w > 0 ? (e.t / e.w) * 100 : 0;
+
+            const emptyAverage = e.e;
+
+            return (
+                hitRate >= 100 &&
+                e.win === true &&
+                emptyAverage !== null &&
+                emptyAverage <= 3
+            );
+
+        }).length;
+    }
+
+    return 0;
+}
+
+function getBadgeCategoryName(category){
+
+    if(category === "rounds"){
+        return "Runden";
+    }
+
+    if(category === "streak"){
+        return "Siegesstreak";
+    }
+
+    if(category === "perfect"){
+        return "Perfekte Runden";
+    }
+
+    return "Abzeichen";
+}
+
+function getBadgeTierName(tier){
+
+    if(tier === "bronze"){
+        return "Bronze";
+    }
+
+    if(tier === "silver"){
+        return "Silber";
+    }
+
+    if(tier === "gold"){
+        return "Gold";
+    }
+
+    if(tier === "diamond"){
+        return "Diamant";
+    }
+
+    return "";
+}
+
+function getSelectedBadgeTier(){
+
+    const value = getBadgeCurrentValue(selectedBadgeCategory);
+
+    const stages = getBadgeStages(selectedBadgeCategory);
+
+    let reached = null;
+
+    for(const stage of stages){
+
+        if(value >= stage.target){
+            reached = stage;
+        }
+
+    }
+
+    return reached;
+}
+
+function selectBadgeStage(tier){
+
+    selectedBadgeStage = tier;
+
+    renderBadgeDetail();
+}
+
+function renderBadgeDetail(){
+
+    const detail = document.getElementById("badgeDetail");
+
+    if(!detail) return;
+
+    const stages = getBadgeStages(selectedBadgeCategory);
+
+    const currentValue = getBadgeCurrentValue(selectedBadgeCategory);
+
+    const highestReached = getSelectedBadgeTier();
+
+    if(!selectedBadgeStage){
+
+        if(highestReached){
+            selectedBadgeStage = highestReached.tier;
+        }else{
+            selectedBadgeStage = stages[0].tier;
+        }
+
+    }
+
+    const selectedStage = stages.find(
+        stage => stage.tier === selectedBadgeStage
+    );
+
+    if(!selectedStage) return;
+
+    let html = "";
+
+    html += `
+        <div class="badge-detail-title">
+            ${getBadgeCategoryName(selectedBadgeCategory)}
+        </div>
+    `;
+
+    html += `
+        <div class="badge-detail-stages">
+    `;
+
+    for(const stage of stages){
+
+        const reached = currentValue >= stage.target;
+
+        const active = stage.tier === selectedStage.tier;
+
+        html += `
+            <div
+                class="badge-detail-stage ${reached ? "" : "locked"} ${active ? "active" : ""}"
+                onclick="selectBadgeStage('${stage.tier}')"
+            >
+                <div class="badge-circle ${reached ? stage.tier : "locked"}">
+                    ${stage.emoji}
+                </div>
+
+                <div>
+                    ${getBadgeTierName(stage.tier)}
+                </div>
+
+                <div>
+                    ${stage.target}
+                </div>
+            </div>
+        `;
+    }
+
+    html += `
+        </div>
+    `;
+
+    const reached = currentValue >= selectedStage.target;
+
+    let remaining = selectedStage.target - currentValue;
+
+    if(remaining < 0){
+        remaining = 0;
+    }
+
+    let description = "";
+
+    if(reached){
+
+        description = `
+            <strong>${getBadgeTierName(selectedStage.tier)} erreicht</strong>
+        `;
+
+    }else{
+
+        description = `
+            <strong>${remaining}</strong> bis zum ${getBadgeTierName(selectedStage.tier)}-Abzeichen
+        `;
+
+    }
+
+    html += `
+        <div class="badge-detail-description">
+            ${description}
+        </div>
+    `;
+
+    if(reached){
+
+        html += `
+            <button
+                class="badge-app-icon-button"
+                onclick="useBadgeAsAppIcon('${selectedBadgeCategory}','${selectedStage.tier}')"
+            >
+                Als App-Symbol verwenden
+            </button>
+        `;
+
+        const savedIcon = localStorage.getItem("selected_badge_icon");
+
+        if(
+            savedIcon ===
+            selectedBadgeCategory + "_" + selectedStage.tier
+        ){
+
+            html += `
+                <div class="badge-app-icon-status">
+                    Dieses Abzeichen ist als App-Symbol ausgewählt.
+                </div>
+            `;
+        }
+
+    }else{
+
+        html += `
+            <div class="badge-app-icon-status">
+                Dieses Abzeichen muss zuerst erreicht werden.
+            </div>
+        `;
+    }
+
+    detail.innerHTML = html;
+}
+
+function useBadgeAsAppIcon(category, tier){
+
+    const stages = getBadgeStages(category);
+
+    const stage = stages.find(
+        s => s.tier === tier
+    );
+
+    if(!stage) return;
+
+    const currentValue = getBadgeCurrentValue(category);
+
+    if(currentValue < stage.target){
+
+        alert("Dieses Abzeichen wurde noch nicht erreicht.");
+
+        return;
+    }
+
+    const iconId = category + "_" + tier;
+
+    localStorage.setItem(
+        "selected_badge_icon",
+        iconId
+    );
+
+    setBadgeBrowserIcon(stage);
+
+    renderBadgeDetail();
+
+    alert(
+        getBadgeTierName(tier) +
+        " wurde als App-Symbol ausgewählt."
+    );
+}
+
+function setBadgeBrowserIcon(stage){
+
+    let canvas = document.createElement("canvas");
+
+    canvas.width = 512;
+    canvas.height = 512;
+
+    const ctx = canvas.getContext("2d");
+
+    let color = "#d1d1d1";
+
+    if(stage.tier === "bronze"){
+        color = "#753126";
+    }
+
+    if(stage.tier === "silver"){
+        color = "#A8A8A8";
+    }
+
+    if(stage.tier === "gold"){
+        color = "#DBB300";
+    }
+
+    if(stage.tier === "diamond"){
+        color = "#00A4DB";
+    }
+
+    ctx.fillStyle = color;
+
+    ctx.fillRect(
+        0,
+        0,
+        512,
+        512
+    );
+
+    ctx.font = "220px Arial";
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillText(
+        stage.emoji,
+        256,
+        256
+    );
+
+    const iconUrl = canvas.toDataURL("image/png");
+
+    let icon = document.querySelector(
+        'link[rel="icon"]'
+    );
+
+    if(!icon){
+
+        icon = document.createElement("link");
+
+        icon.rel = "icon";
+
+        document.head.appendChild(icon);
+    }
+
+    icon.href = iconUrl;
+
+    let appleIcon = document.querySelector(
+        'link[rel="apple-touch-icon"]'
+    );
+
+    if(!appleIcon){
+
+        appleIcon = document.createElement("link");
+
+        appleIcon.rel = "apple-touch-icon";
+
+        document.head.appendChild(appleIcon);
+    }
+
+    appleIcon.href = iconUrl;
+}
+
+function restoreSelectedBadgeIcon(){
+
+    const savedIcon = localStorage.getItem(
+        "selected_badge_icon"
+    );
+
+    if(!savedIcon) return;
+
+    const parts = savedIcon.split("_");
+
+    if(parts.length < 2) return;
+
+    const category = parts[0];
+
+    const tier = parts[1];
+
+    const stages = getBadgeStages(category);
+
+    const stage = stages.find(
+        s => s.tier === tier
+    );
+
+    if(!stage) return;
+
+    if(
+        getBadgeCurrentValue(category) <
+        stage.target
+    ){
+
+        return;
+    }
+
+    setBadgeBrowserIcon(stage);
+}
 
 
 </script>
@@ -3076,6 +3617,14 @@ function managePlaces(){
 
     </div>
 
+</div>
+
+<div id="badgeDetailModal" class="badge-modal">
+    <div class="badge-content badge-detail-content">
+        <button class="badge-back-button" onclick="closeBadgeDetail()">Zurück</button>
+
+        <div id="badgeDetail"></div>
+    </div>
 </div>
 
 <div id="placeModal" style="
