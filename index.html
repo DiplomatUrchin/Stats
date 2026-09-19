@@ -1899,10 +1899,14 @@ function calculateWinStreaks(){
 
 
 
-function openBadges(){ 
-    document.getElementById("settingsMenu").style.display = "none";
-    document.getElementById("badgeModal").style.display = "flex"; 
-    renderBadges(); 
+function openBadges(){  
+    const menu = document.getElementById("settingsMenu");
+    const modal = document.getElementById("badgeModal");
+
+    menu.style.display = "none";
+    modal.style.display = "flex";
+
+    renderBadges();
 }
 
 function closeBadges(){
