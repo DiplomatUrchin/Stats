@@ -312,6 +312,98 @@ body.dark #placeModal button {
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
+.score-goal-result {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f2f2f7;
+}
+
+.score-goal-result .row {
+    margin: 6px 0;
+}
+
+.score-goal-card {
+    background: #f2f2f7;
+    padding: 12px;
+    border-radius: 12px;
+    margin-top: 10px;
+}
+
+body.dark .score-goal-result,
+body.dark .score-goal-card {
+    background: #2a2a2a;
+}
+
+.score-goal-pinned {
+    margin: 10px 0 15px 0;
+    padding: 14px;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.score-goal-pinned-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.score-goal-pinned-title {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.score-goal-pinned-target {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.score-goal-pinned-current {
+    font-size: 25px;
+    font-weight: bold;
+}
+
+.score-goal-pinned-rounds {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 3px;
+}
+
+.score-goal-pinned-main {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.score-goal-pinned-main div {
+    text-align: center;
+    background: #f2f2f7;
+    border-radius: 10px;
+    padding: 8px 4px;
+}
+
+.score-goal-pinned-main b {
+    display: block;
+    font-size: 15px;
+}
+
+.score-goal-pinned-main span {
+    display: block;
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: 2px;
+}
+
+body.dark .score-goal-pinned {
+    background: #1e1e1e;
+}
+
+body.dark .score-goal-pinned-main div {
+    background: #2a2a2a;
+}
+
 /* ===== EINSTELLUNGSMENÜ EINHEITLICH ===== */
 
 .settings-menu {
@@ -454,7 +546,7 @@ body.dark .settings-section {
 <div id="home" class="page active">
 <button class="dark-toggle" onclick="toggleSettingsMenu()">⚙️</button>
 <h2>Statistik</h2>
-
+<div id="pinnedScoreGoal"></div>
 <div id="dashboard" class="dashboard">
 
     <div class="dash-card">
@@ -599,12 +691,14 @@ if(!data){
         g: { w:0,t:0,r:0,win:0,tropf:0, eS:0,eC:0 },
         places: [],
         defaultDrink: "05",
-        v: []
+        v: [],
+        scoreGoals: []
     };
 } else {
     if(!data.places) data.places = [];
     if(!data.defaultPlace) data.defaultPlace = "";
     if(!data.defaultDrink) data.defaultDrink = "05";
+    if(!data.scoreGoals) data.scoreGoals = [];
 }
 
 function adjustE(e, drink){
@@ -618,6 +712,605 @@ function adjustE(e, drink){
 
 function save(){
     localStorage.setItem("offline_app", JSON.stringify(data));
+}
+
+function openScoreGoals(){
+    document.getElementById("scoreGoalModal").style.display = "flex";
+    renderScoreGoals();
+}
+
+function closeScoreGoals(){
+    document.getElementById("scoreGoalModal").style.display = "none";
+}
+
+function getCurrentGoalStats(){
+
+    let entries = data.v;
+
+    let totalW = 0;
+    let totalT = 0;
+    let totalRounds = 0;
+    let totalWins = 0;
+    let emptySum = 0;
+    let emptyCount = 0;
+
+    entries.forEach(e => {
+
+        totalW += Number(e.w) || 0;
+        totalT += Number(e.t) || 0;
+        totalRounds++;
+
+        if(e.win) totalWins++;
+
+        if(e.eRaw !== null && e.eRaw !== undefined && !isNaN(e.eRaw)){
+            let adjusted = adjustE(
+                Number(e.eRaw),
+                e.drink
+            );
+
+            if(adjusted > 0){
+                emptySum += adjusted;
+                emptyCount++;
+            }
+        }
+    });
+
+    let hit = totalW > 0
+        ? totalT / totalW * 100
+        : 0;
+
+    let win = totalRounds > 0
+        ? totalWins / totalRounds * 100
+        : 0;
+
+    let empty = emptyCount > 0
+        ? emptySum / emptyCount
+        : 0;
+
+    let score =
+        (hit / 100) * 40 +
+        (win / 100) * 20 +
+        (empty > 0 ? (3 / empty) * 40 : 0);
+
+    return {
+        w: totalW,
+        t: totalT,
+        rounds: totalRounds,
+        wins: totalWins,
+        hit,
+        win,
+        empty,
+        score
+    };
+}
+
+function calculateRequiredValues(targetScore, futureRounds){
+
+    const current = getCurrentGoalStats();
+
+    if(targetScore <= 0 || futureRounds <= 0){
+        return null;
+    }
+
+    if(current.rounds === 0){
+        return {
+            targetScore,
+            targetHit: 0,
+            targetWin: 0,
+            targetEmpty: 3,
+            futureHit: 0,
+            futureWin: 0,
+            futureWins: 0,
+            current
+        };
+    }
+
+    let best = null;
+
+    for(let hit = 0; hit <= 100; hit += 0.5){
+
+        for(let win = 0; win <= 100; win += 0.5){
+
+            let remaining =
+                targetScore -
+                (hit / 100) * 40 -
+                (win / 100) * 20;
+
+            if(remaining <= 0){
+                continue;
+            }
+
+            let empty = 120 / remaining;
+
+            if(!isFinite(empty) || empty <= 0){
+                continue;
+            }
+
+            let changeHit = (hit - current.hit) / 100;
+            let changeWin = (win - current.win) / 100;
+
+            let emptyBase =
+                Math.max(current.empty, 0.1);
+
+            let changeEmpty =
+                (empty - emptyBase) / emptyBase;
+
+            let distance =
+                changeHit * changeHit +
+                changeWin * changeWin +
+                changeEmpty * changeEmpty;
+
+            if(
+                best === null ||
+                distance < best.distance
+            ){
+                best = {
+                    hit,
+                    win,
+                    empty,
+                    distance
+                };
+            }
+        }
+    }
+
+    if(!best){
+        return null;
+    }
+
+    let averageThrows =
+        current.rounds > 0
+            ? current.w / current.rounds
+            : 0;
+
+    let futureThrows =
+        averageThrows * futureRounds;
+
+    let futureHit;
+
+    if(futureThrows > 0){
+
+        futureHit =
+            (
+                best.hit / 100 *
+                (current.w + futureThrows)
+                -
+                current.t
+            )
+            /
+            futureThrows
+            * 100;
+
+    } else {
+        futureHit = best.hit;
+    }
+
+    let currentEmptyCount =
+        data.v.filter(e =>
+            e.eRaw !== null &&
+            e.eRaw !== undefined &&
+            !isNaN(e.eRaw)
+        ).length;
+
+    let futureEmptyCount = futureRounds;
+
+    let futureEmpty;
+
+    if(futureEmptyCount > 0){
+
+        futureEmpty =
+            (
+                best.empty *
+                (currentEmptyCount + futureEmptyCount)
+                -
+                current.empty * currentEmptyCount
+            )
+            /
+            futureEmptyCount;
+
+    } else {
+        futureEmpty = best.empty;
+    }
+
+    let currentWinCount = current.wins;
+
+    let requiredTotalWins =
+        Math.ceil(
+            best.win / 100 *
+            (current.rounds + futureRounds)
+        );
+
+    let futureWins =
+        requiredTotalWins - currentWinCount;
+
+    if(futureWins < 0){
+        futureWins = 0;
+    }
+
+    if(futureWins > futureRounds){
+        futureWins = futureRounds;
+    }
+
+    return {
+        targetScore,
+        targetHit: best.hit,
+        targetWin: best.win,
+        targetEmpty: best.empty,
+        futureHit,
+        futureEmpty,
+        futureWins,
+        futureRounds,
+        current
+    };
+}
+
+function createScoreGoal(){
+
+    const scoreInput =
+        document.getElementById("scoreGoalInput");
+
+    const roundsInput =
+        document.getElementById("scoreGoalRoundsInput");
+
+    let targetScore =
+        Number(scoreInput.value);
+
+    let futureRounds =
+        Number(roundsInput.value);
+
+    if(
+        !isFinite(targetScore) ||
+        targetScore <= 0
+    ){
+        alert("Bitte einen gültigen Ziel-Score eingeben.");
+        return;
+    }
+
+    if(
+        !isFinite(futureRounds) ||
+        futureRounds < 1
+    ){
+        alert("Bitte eine gültige Rundenzahl eingeben.");
+        return;
+    }
+
+    futureRounds = Math.floor(futureRounds);
+
+    let result =
+        calculateRequiredValues(
+            targetScore,
+            futureRounds
+        );
+
+    if(!result){
+        alert(
+            "Für diesen Ziel-Score konnte keine passende Berechnung gefunden werden."
+        );
+        return;
+    }
+
+    const currentStats = getCurrentGoalStats();
+
+const goal = {
+    id: Date.now(),
+    targetScore,
+    futureRounds,
+    originalRounds: futureRounds,
+    startRounds: currentStats.rounds,
+    startWins: currentStats.wins,
+    result,
+    pinned: false
+};
+
+    data.scoreGoals.push(goal);
+
+    save();
+
+    renderScoreGoals();
+
+    scoreInput.value = "";
+    roundsInput.value = "";
+}
+
+function deleteScoreGoal(id){
+
+    data.scoreGoals =
+        data.scoreGoals.filter(
+            goal => goal.id !== id
+        );
+
+    save();
+
+    renderScoreGoals();
+    renderPinnedScoreGoal();
+}
+
+function togglePinScoreGoal(id){
+
+    data.scoreGoals.forEach(goal => {
+
+        if(goal.id === id){
+            goal.pinned = !goal.pinned;
+        }
+
+    });
+
+    save();
+
+    renderScoreGoals();
+    renderPinnedScoreGoal();
+}
+
+function renderScoreGoals(){
+
+    const list = document.getElementById("scoreGoalList");
+
+    if(!list) return;
+
+    list.innerHTML = "";
+
+    if(data.scoreGoals.length === 0){
+        list.innerHTML =
+            `<div class="small">
+                Noch kein Score-Ziel gespeichert.
+            </div>`;
+
+        renderPinnedScoreGoal();
+        return;
+    }
+
+    const current = getCurrentGoalStats();
+
+    data.scoreGoals.forEach(goal => {
+
+        const playedSinceStart =
+            Math.max(
+                0,
+                current.rounds - (goal.startRounds || 0)
+            );
+
+        const winsSinceStart =
+            Math.max(
+                0,
+                current.wins - (goal.startWins || 0)
+            );
+
+        const remainingRounds =
+            Math.max(
+                0,
+                (goal.originalRounds || goal.futureRounds) - playedSinceStart
+            );
+
+        let result;
+
+        if(remainingRounds > 0){
+
+            result = calculateRequiredValues(
+                goal.targetScore,
+                remainingRounds
+            );
+
+        } else {
+
+            result = calculateRequiredValues(
+                goal.targetScore,
+                1
+            );
+        }
+
+        goal.result = result;
+
+        const originalRequiredWins =
+            Math.ceil(
+                result.targetWin / 100 *
+                (goal.originalRounds || goal.futureRounds)
+            );
+
+        let remainingWins =
+            originalRequiredWins - winsSinceStart;
+
+        remainingWins =
+            Math.max(
+                0,
+                Math.min(
+                    remainingRounds,
+                    remainingWins
+                )
+            );
+
+        let div = document.createElement("div");
+
+        div.className = "score-goal-card";
+
+        div.innerHTML = `
+
+            <div style="
+                font-weight:bold;
+                font-size:16px;
+                margin-bottom:10px;
+            ">
+                Score-Ziel ${goal.targetScore.toFixed(1)}
+            </div>
+
+            <div class="row">
+                <b>Aktueller Score</b>
+                <span>${result.current.score.toFixed(1)}</span>
+            </div>
+
+            <div class="row">
+                <b>Trefferquote gesamt</b>
+                <span>${result.targetHit.toFixed(1)}%</span>
+            </div>
+
+            <div class="row">
+                <b>Trefferquote nächste ${remainingRounds} Runden</b>
+                <span>${Math.max(0,result.futureHit).toFixed(1)}%</span>
+            </div>
+
+            <div class="row">
+                <b>Leer-Durchschnitt gesamt</b>
+                <span>${result.targetEmpty.toFixed(2)}</span>
+            </div>
+
+            <div class="row">
+                <b>Leer nächste ${remainingRounds} Runden</b>
+                <span>${Math.max(0,result.futureEmpty).toFixed(2)}</span>
+            </div>
+
+            <div class="row">
+                <b>Siegesquote gesamt</b>
+                <span>${result.targetWin.toFixed(1)}%</span>
+            </div>
+
+            <div class="row">
+                <b>Noch benötigte Siege</b>
+                <span>${remainingWins} / ${remainingRounds}</span>
+            </div>
+
+            <div style="
+                display:flex;
+                gap:8px;
+                margin-top:12px;
+            ">
+
+                <button
+                    class="small-btn ${goal.pinned ? "active-default" : ""}"
+                    onclick="togglePinScoreGoal(${goal.id})">
+                    ${goal.pinned ? "Angepinnt" : "Anpinnen"}
+                </button>
+
+                <button
+                    class="small-btn"
+                    onclick="deleteScoreGoal(${goal.id})">
+                    Löschen
+                </button>
+
+            </div>
+        `;
+
+        list.appendChild(div);
+    });
+
+    save();
+
+    renderPinnedScoreGoal();
+}
+
+function renderPinnedScoreGoal(){
+
+    const container =
+        document.getElementById("pinnedScoreGoal");
+
+    if(!container) return;
+
+    container.innerHTML = "";
+
+    const pinned =
+        data.scoreGoals.find(goal => goal.pinned);
+
+    if(!pinned) return;
+
+    const current =
+        getCurrentGoalStats();
+
+    const playedSinceStart =
+        Math.max(
+            0,
+            current.rounds - (pinned.startRounds || 0)
+        );
+
+    const winsSinceStart =
+        Math.max(
+            0,
+            current.wins - (pinned.startWins || 0)
+        );
+
+    const remainingRounds =
+        Math.max(
+            0,
+            (pinned.originalRounds || pinned.futureRounds)
+            - playedSinceStart
+        );
+
+    const result =
+        calculateRequiredValues(
+            pinned.targetScore,
+            remainingRounds > 0
+                ? remainingRounds
+                : 1
+        );
+
+    pinned.result = result;
+
+    const originalRequiredWins =
+        Math.ceil(
+            result.targetWin / 100 *
+            (pinned.originalRounds || pinned.futureRounds)
+        );
+
+    let remainingWins =
+        originalRequiredWins - winsSinceStart;
+
+    remainingWins =
+        Math.max(
+            0,
+            Math.min(
+                remainingRounds,
+                remainingWins
+            )
+        );
+
+    const card =
+        document.createElement("div");
+
+    card.className =
+        "score-goal-pinned";
+
+    card.innerHTML = `
+
+        <div class="score-goal-pinned-header">
+
+            <div>
+                <div class="score-goal-pinned-title">
+                    Score-Ziel
+                </div>
+
+                <div class="score-goal-pinned-target">
+                    ${pinned.targetScore.toFixed(1)}
+                </div>
+            </div>
+
+            <div class="score-goal-pinned-current">
+                ${result.current.score.toFixed(1)}
+            </div>
+
+        </div>
+
+        <div class="score-goal-pinned-rounds">
+            Noch ${remainingRounds} Runden
+        </div>
+
+        <div class="score-goal-pinned-main">
+
+            <div>
+                <b>${remainingWins} / ${remainingRounds}</b>
+                <span>Siege</span>
+            </div>
+
+            <div>
+                <b>${Math.max(0,result.futureHit).toFixed(1)}%</b>
+                <span>Treffer</span>
+            </div>
+
+            <div>
+                <b>${Math.max(0,result.futureEmpty).toFixed(2)}</b>
+                <span>Leer</span>
+            </div>
+
+        </div>
+    `;
+
+    container.appendChild(card);
 }
 
 function getFilteredData(){
@@ -1000,10 +1693,10 @@ if(editIndex !== null){
 
     data.v.push(newEntry);
 }
-
-    save();
-    stats();
-    clear();
+save();
+stats();
+renderScoreGoals();
+clear();
 }
 
 function handlePeriodChange() {
@@ -1348,8 +2041,10 @@ function del(i){
     data.v.splice(i,1);
 
     save();
-    stats();
-    openV();
+stats();
+renderScoreGoals();
+renderPinnedScoreGoal();
+openV();
 }
 
 function back(){
@@ -1407,6 +2102,7 @@ tropfInput().addEventListener("change", () => {
 
 stats();
 refreshPlaces();
+renderPinnedScoreGoal();
 
 document.getElementById("drink").value =
     data.defaultDrink || "05";
@@ -1697,6 +2393,10 @@ function managePlaces(){
         Orte bearbeiten
     </button>
 
+    <button onclick="openScoreGoals()">
+    Score-Ziele
+</button>
+
     <div class="settings-section">
 
     <div style="font-size:12px; opacity:0.7; margin-bottom:6px;">
@@ -1723,6 +2423,53 @@ function managePlaces(){
 
 <input type="file" id="importFile" accept="application/json"
        style="display:none" onchange="importData(event)">
+
+<div id="scoreGoalModal" style="
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.5);
+    z-index:3000;
+    align-items:center;
+    justify-content:center;
+">
+
+    <div class="place-modal-content">
+
+        <h3>Score-Zielsystem</h3>
+
+        <input
+            id="scoreGoalInput"
+            type="number"
+            step="0.1"
+            placeholder="Gewünschten Score eingeben"
+        >
+
+        <input
+            id="scoreGoalRoundsInput"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Trage die Runden ein, in denen du es erreichen willst"
+        >
+
+        <button onclick="createScoreGoal()">
+            Ziel berechnen
+        </button>
+
+        <div id="scoreGoalResult" style="margin-top:12px;"></div>
+
+        <div id="scoreGoalList" style="margin-top:15px;"></div>
+
+        <button onclick="closeScoreGoals()">
+            Fertig
+        </button>
+
+    </div>
+</div>
 
 <div id="placeModal" style="
     display:none;
