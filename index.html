@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Statistik App3</title>
+<title>Statistik App2</title>
 
 <link rel="manifest" href="manifest.json">
 
@@ -1058,9 +1058,10 @@ function save(){
     localStorage.setItem("offline_app", JSON.stringify(data));
 }
 
-function openScoreGoals(){
-    document.getElementById("scoreGoalModal").style.display = "flex";
-    renderScoreGoals();
+function openScoreGoals(){ 
+    document.getElementById("settingsMenu").style.display = "none";
+    document.getElementById("scoreGoalModal").style.display = "flex"; 
+    renderScoreGoals(); 
 }
 
 function closeScoreGoals(){
@@ -1898,9 +1899,10 @@ function calculateWinStreaks(){
 
 
 
-function openBadges(){
-    document.getElementById("badgeModal").style.display = "flex";
-    renderBadges();
+function openBadges(){ 
+    document.getElementById("settingsMenu").style.display = "none";
+    document.getElementById("badgeModal").style.display = "flex"; 
+    renderBadges(); 
 }
 
 function closeBadges(){
@@ -2111,22 +2113,22 @@ let perfectTier = "locked";
 let perfectTarget = 1;
 let perfectNext = 1 - perfectRounds;
 
-if(perfectRounds >= 25){
+if(perfectRounds >= 5){
     perfectTier = "diamond";
-    perfectTarget = 25;
-    perfectNext = 0;
-}else if(perfectRounds >= 10){
-    perfectTier = "gold";
-    perfectTarget = 10;
-    perfectNext = 25 - perfectRounds;
-}else if(perfectRounds >= 5){
-    perfectTier = "silver";
     perfectTarget = 5;
-    perfectNext = 10 - perfectRounds;
+    perfectNext = 0;
+}else if(perfectRounds >= 3){
+    perfectTier = "gold";
+    perfectTarget = 3;
+    perfectNext = 5 - perfectRounds;
+}else if(perfectRounds >= 2){
+    perfectTier = "silver";
+    perfectTarget = 2;
+    perfectNext = 3 - perfectRounds;
 }else if(perfectRounds >= 1){
     perfectTier = "bronze";
     perfectTarget = 1;
-    perfectNext = 5 - perfectRounds;
+    perfectNext = 2 - perfectRounds;
 }
 
     list.innerHTML = `
