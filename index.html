@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Statistik App3</title>
+<title>Statistik App2</title>
 
 <link rel="manifest" href="manifest.json">
 
@@ -16,6 +16,71 @@
     transition:
         transform 0.15s ease,
         box-shadow 0.2s ease;
+}
+
+.dashboard-clickable {
+    cursor: pointer;
+}
+
+.dashboard-clickable:active {
+    transform: scale(0.96);
+}
+
+.dashboard-stat-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.dashboard-stat-content {
+    width: min(400px, 100%);
+    max-height: 80vh;
+    overflow-y: auto;
+    background: white;
+    color: #000;
+    border-radius: 18px;
+    padding: 18px;
+    box-sizing: border-box;
+}
+
+.dashboard-stat-content h3 {
+    margin-top: 0;
+    margin-bottom: 18px;
+    text-align: center;
+}
+
+.dashboard-stat-value {
+    padding: 14px;
+    margin: 10px 0;
+    background: #f2f2f7;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.dashboard-stat-value b {
+    display: block;
+    font-size: 24px;
+    margin-bottom: 4px;
+}
+
+.dashboard-stat-value span {
+    font-size: 12px;
+    opacity: 0.65;
+}
+
+body.dark .dashboard-stat-content {
+    background: #1e1e1e;
+    color: #e5e5ea;
+}
+
+body.dark .dashboard-stat-value {
+    background: #2a2a2a;
 }
 
 /* Beim Antippen */
@@ -790,6 +855,20 @@ body.dark .badge-app-icon-button{
     }
 }
 
+.win-streak-fire {
+    display: inline-block;
+    animation: winStreakFire 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes winStreakFire {
+    from {
+        transform: scale(2);
+    }
+
+    to {
+        transform: scale(2.4);
+    }
+}
 
 /* ===== MOBILE ===== */
 
@@ -875,45 +954,31 @@ body.dark .badge-app-icon-button{
 
 <div id="dashboard">
 
-    <div class="dashboard">
-        
-        <div class="dash-card">
-            <div class="dash-value" id="dCurrentWinStreak">-</div>
-            <div class="dash-label">Aktuelle Siegesstreak</div>
-        </div>
-
-        <div class="dash-card">
-            <div class="dash-value" id="dLongestWinStreak">0</div>
-            <div class="dash-label">Längste Siegesstreak</div>
-        </div>
-
-    </div>
 
     <div class="dashboard">
 
-        <div class="dash-card">
-            <div class="dash-value" id="dScore">0</div>
-            <div class="dash-label">Score</div>
-        </div>
-
-        <div class="dash-card">
-            <div class="dash-value" id="dHit">0%</div>
-            <div class="dash-label">Treffer</div>
-        </div>
-
-        <div class="dash-card">
-            <div class="dash-value" id="dWin">0%</div>
-            <div class="dash-label">Siege</div>
-        </div>
-
+    <div class="dash-card dashboard-clickable" onclick="openDashboardStats('score')">
+        <div class="dash-value" id="dScore">0</div>
+        <div class="dash-label">Score</div>
     </div>
 
+    <div class="dash-card dashboard-clickable" onclick="openDashboardStats('hit')">
+        <div class="dash-value" id="dHit">0%</div>
+        <div class="dash-label">Treffer</div>
+    </div>
+
+    <div class="dash-card dashboard-clickable" onclick="openDashboardStats('win')">
+    <div class="dash-value" id="dWin">0%</div>
+    <div class="dash-label">Siege</div>
+</div>
+
+</div>
 </div>
 
 <!-- NEU: kleine Zusatz-Stats -->
 <div class="dashboard" style="margin-top:0;">
 
-    <div class="dash-card">
+    <div class="dash-card dashboard-clickable" onclick="openDashboardStats('empty')">
         <div class="dash-value" id="dAvgEmpty" style="font-size:14px;">0</div>
         <div class="dash-label">Ø Leer</div>
     </div>
@@ -2444,6 +2509,224 @@ function getEntryScore(e){
     return score;
 }
 
+function openDashboardStats(type){
+
+    const modal = document.getElementById("dashboardStatModal");
+    const title = document.getElementById("dashboardStatTitle");
+    const body = document.getElementById("dashboardStatBody");
+
+    if(!modal || !title || !body) return;
+
+    const entries = data.v.slice();
+
+    if(entries.length === 0){
+
+        title.innerText = "Statistik";
+
+        body.innerHTML = `
+            <div class="dashboard-stat-value">
+                <b>Noch keine Daten</b>
+                <span>Es wurden noch keine Runden eingetragen.</span>
+            </div>
+        `;
+
+        modal.style.display = "flex";
+        return;
+    }
+
+    if(type === "score"){
+
+        title.innerText = "Score";
+
+        let scoredEntries = entries.map(e => ({
+            entry: e,
+            value: getEntryScore(e)
+        }));
+
+        let highest = scoredEntries.reduce((a,b) =>
+            b.value > a.value ? b : a
+        );
+
+        let lowest = scoredEntries.reduce((a,b) =>
+            b.value < a.value ? b : a
+        );
+
+        body.innerHTML = `
+            <div class="dashboard-stat-value">
+                <b>${highest.value.toFixed(1)}</b>
+                <span>Höchster Score</span>
+                <div class="small">
+                    ${new Date(highest.entry.time).toLocaleDateString("de-DE")}
+                </div>
+            </div>
+
+            <div class="dashboard-stat-value">
+                <b>${lowest.value.toFixed(1)}</b>
+                <span>Niedrigster Score</span>
+                <div class="small">
+                    ${new Date(lowest.entry.time).toLocaleDateString("de-DE")}
+                </div>
+            </div>
+        `;
+    }
+
+    if(type === "hit"){
+
+        title.innerText = "Trefferquote";
+
+        let hitEntries = entries
+            .filter(e => Number(e.w) > 0)
+            .map(e => ({
+                entry: e,
+                value: (Number(e.t) / Number(e.w)) * 100
+            }));
+
+        if(hitEntries.length === 0){
+
+            body.innerHTML = `
+                <div class="dashboard-stat-value">
+                    <b>Keine Daten</b>
+                    <span>Es gibt noch keine Runden mit Würfen.</span>
+                </div>
+            `;
+
+        } else {
+
+            let best = hitEntries.reduce((a,b) =>
+                b.value > a.value ? b : a
+            );
+
+            let worst = hitEntries.reduce((a,b) =>
+                b.value < a.value ? b : a
+            );
+
+            body.innerHTML = `
+                <div class="dashboard-stat-value">
+                    <b>${best.value.toFixed(1)}%</b>
+                    <span>Beste Trefferquote</span>
+                    <div class="small">
+                        ${new Date(best.entry.time).toLocaleDateString("de-DE")}
+                    </div>
+                </div>
+
+                <div class="dashboard-stat-value">
+                    <b>${worst.value.toFixed(1)}%</b>
+                    <span>Schlechteste Trefferquote</span>
+                    <div class="small">
+                        ${new Date(worst.entry.time).toLocaleDateString("de-DE")}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    if(type === "win"){
+
+    title.innerText = "Siege";
+
+    const streaks = calculateWinStreaks();
+
+    const currentStreakHtml =
+        streaks.current >= 2
+            ? streaks.current + ' Siege <span class="win-streak-fire">🔥</span>'
+            : "-";
+
+    const longestStreakText =
+        streaks.longest === 1
+            ? "1 Sieg"
+            : streaks.longest + " Siege";
+
+    body.innerHTML = `
+        <div class="dashboard-stat-value">
+            <b>${currentStreakHtml}</b>
+            <span>Aktuelle Siegesstreak</span>
+        </div>
+
+        <div class="dashboard-stat-value">
+            <b>${longestStreakText}</b>
+            <span>Längste Siegesstreak</span>
+        </div>
+
+        <div class="dashboard-stat-value">
+            <b>${document.getElementById("dWin").innerText}</b>
+            <span>Siegesquote</span>
+        </div>
+    `;
+}
+
+    if(type === "empty"){
+
+        title.innerText = "Leer";
+
+        let emptyEntries = entries
+            .filter(e =>
+                e.eRaw !== null &&
+                e.eRaw !== undefined &&
+                !isNaN(e.eRaw)
+            )
+            .map(e => {
+
+                let value = adjustE(
+                    Number(e.eRaw),
+                    e.drink
+                );
+
+                return {
+                    entry: e,
+                    value: value
+                };
+            })
+            .filter(e => e.value > 0);
+
+        if(emptyEntries.length === 0){
+
+            body.innerHTML = `
+                <div class="dashboard-stat-value">
+                    <b>Keine Daten</b>
+                    <span>Es gibt noch keine Runden mit einem Leer-Wert.</span>
+                </div>
+            `;
+
+        } else {
+
+            let fastest = emptyEntries.reduce((a,b) =>
+                b.value < a.value ? b : a
+            );
+
+            let slowest = emptyEntries.reduce((a,b) =>
+                b.value > a.value ? b : a
+            );
+
+            body.innerHTML = `
+                <div class="dashboard-stat-value">
+                    <b>${fastest.value.toFixed(2)}</b>
+                    <span>Schnellste Runde</span>
+                    <div class="small">
+                        ${new Date(fastest.entry.time).toLocaleDateString("de-DE")}
+                    </div>
+                </div>
+
+                <div class="dashboard-stat-value">
+                    <b>${slowest.value.toFixed(2)}</b>
+                    <span>Langsamste Runde</span>
+                    <div class="small">
+                        ${new Date(slowest.entry.time).toLocaleDateString("de-DE")}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    modal.style.display = "flex";
+}
+
+
+function closeDashboardStats(){
+
+    document.getElementById("dashboardStatModal").style.display = "none";
+
+}
+
 function formatScoreChange(change){
     if(change === null) return "";
 
@@ -3517,6 +3800,23 @@ function restoreSelectedBadgeIcon(){
 
 
 </script>
+
+<div id="dashboardStatModal" class="dashboard-stat-modal">
+
+    <div class="dashboard-stat-content">
+
+        <h3 id="dashboardStatTitle">Statistik</h3>
+
+        <div id="dashboardStatBody"></div>
+
+        <button onclick="closeDashboardStats()">
+            Fertig
+        </button>
+
+    </div>
+
+</div>
+
 <div id="settingsMenu" class="settings-menu">
 
     <button onclick="toggleDark()" id="darkToggleBtn">
