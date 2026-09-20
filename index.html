@@ -2282,6 +2282,133 @@ if(perfectRounds >= 5){
     perfectNext = 2 - perfectRounds;
 }
 
+// =========================================================
+// SCHARFSCHÜTZE
+// =========================================================
+
+const sharpshooterRounds = data.v.filter(e => {
+
+    if(Number(e.w) <= 0) return false;
+
+    return Number(e.t) === Number(e.w);
+
+}).length;
+
+let sharpshooterTier = "locked";
+let sharpshooterTarget = 3;
+let sharpshooterNext = 3 - sharpshooterRounds;
+
+if(sharpshooterRounds >= 25){
+    sharpshooterTier = "diamond";
+    sharpshooterTarget = 25;
+    sharpshooterNext = 0;
+}else if(sharpshooterRounds >= 10){
+    sharpshooterTier = "gold";
+    sharpshooterTarget = 10;
+    sharpshooterNext = 25 - sharpshooterRounds;
+}else if(sharpshooterRounds >= 5){
+    sharpshooterTier = "silver";
+    sharpshooterTarget = 5;
+    sharpshooterNext = 10 - sharpshooterRounds;
+}else if(sharpshooterRounds >= 3){
+    sharpshooterTier = "bronze";
+    sharpshooterTarget = 3;
+    sharpshooterNext = 5 - sharpshooterRounds;
+}
+
+
+// =========================================================
+// ALLEINE
+// =========================================================
+
+const aloneRounds = data.v.filter(e =>
+    (e.teamSize || "team") === "alone"
+).length;
+
+let aloneTier = "locked";
+let aloneTarget = 10;
+let aloneNext = 10 - aloneRounds;
+
+if(aloneRounds >= 100){
+    aloneTier = "diamond";
+    aloneTarget = 100;
+    aloneNext = 0;
+}else if(aloneRounds >= 50){
+    aloneTier = "gold";
+    aloneTarget = 50;
+    aloneNext = 100 - aloneRounds;
+}else if(aloneRounds >= 25){
+    aloneTier = "silver";
+    aloneTarget = 25;
+    aloneNext = 50 - aloneRounds;
+}else if(aloneRounds >= 10){
+    aloneTier = "bronze";
+    aloneTarget = 10;
+    aloneNext = 25 - aloneRounds;
+}
+
+
+// =========================================================
+// ZU ZWEIT
+// =========================================================
+
+const twoPlayerRounds = data.v.filter(e =>
+    (e.teamSize || "team") === "2er"
+).length;
+
+let twoPlayerTier = "locked";
+let twoPlayerTarget = 10;
+let twoPlayerNext = 10 - twoPlayerRounds;
+
+if(twoPlayerRounds >= 100){
+    twoPlayerTier = "diamond";
+    twoPlayerTarget = 100;
+    twoPlayerNext = 0;
+}else if(twoPlayerRounds >= 50){
+    twoPlayerTier = "gold";
+    twoPlayerTarget = 50;
+    twoPlayerNext = 100 - twoPlayerRounds;
+}else if(twoPlayerRounds >= 25){
+    twoPlayerTier = "silver";
+    twoPlayerTarget = 25;
+    twoPlayerNext = 50 - twoPlayerRounds;
+}else if(twoPlayerRounds >= 10){
+    twoPlayerTier = "bronze";
+    twoPlayerTarget = 10;
+    twoPlayerNext = 25 - twoPlayerRounds;
+}
+
+
+// =========================================================
+// TEAM
+// =========================================================
+
+const teamRounds = data.v.filter(e =>
+    (e.teamSize || "team") === "team"
+).length;
+
+let teamTier = "locked";
+let teamTarget = 10;
+let teamNext = 10 - teamRounds;
+
+if(teamRounds >= 100){
+    teamTier = "diamond";
+    teamTarget = 100;
+    teamNext = 0;
+}else if(teamRounds >= 50){
+    teamTier = "gold";
+    teamTarget = 50;
+    teamNext = 100 - teamRounds;
+}else if(teamRounds >= 25){
+    teamTier = "silver";
+    teamTarget = 25;
+    teamNext = 50 - teamRounds;
+}else if(teamRounds >= 10){
+    teamTier = "bronze";
+    teamTarget = 10;
+    teamNext = 25 - teamRounds;
+}
+
     list.innerHTML = `
 
        <div class="badge-card" onclick="openBadgeDetail('rounds')">
@@ -2339,6 +2466,81 @@ if(perfectRounds >= 5){
         }
     </div>
 </div>
+
+        <div class="badge-card" onclick="openBadgeDetail('sharpshooter')">
+            <div class="badge-circle ${sharpshooterTier}">
+                🎯
+            </div>
+
+            <div class="badge-title">
+                Triff ${sharpshooterTarget} Runden perfekt
+            </div>
+
+            <div class="badge-description">
+                ${
+                    sharpshooterNext === 0
+                        ? "Diamant erreicht"
+                        : `${sharpshooterNext} bis zum nächsten Badge`
+                }
+            </div>
+        </div>
+
+
+        <div class="badge-card" onclick="openBadgeDetail('alone')">
+            <div class="badge-circle ${aloneTier}">
+                👤
+            </div>
+
+            <div class="badge-title">
+                Spiele ${aloneTarget} Runden alleine
+            </div>
+
+            <div class="badge-description">
+                ${
+                    aloneNext === 0
+                        ? "Diamant erreicht"
+                        : `${aloneNext} bis zum nächsten Badge`
+                }
+            </div>
+        </div>
+
+
+        <div class="badge-card" onclick="openBadgeDetail('2er')">
+            <div class="badge-circle ${twoPlayerTier}">
+                👥
+            </div>
+
+            <div class="badge-title">
+                Spiele ${twoPlayerTarget} Runden zu zweit
+            </div>
+
+            <div class="badge-description">
+                ${
+                    twoPlayerNext === 0
+                        ? "Diamant erreicht"
+                        : `${twoPlayerNext} bis zum nächsten Badge`
+                }
+            </div>
+        </div>
+
+
+        <div class="badge-card" onclick="openBadgeDetail('team')">
+            <div class="badge-circle ${teamTier}">
+                👨‍👩‍👧‍👦
+            </div>
+
+            <div class="badge-title">
+                Spiele ${teamTarget} Runden im Team
+            </div>
+
+            <div class="badge-description">
+                ${
+                    teamNext === 0
+                        ? "Diamant erreicht"
+                        : `${teamNext} bis zum nächsten Badge`
+                }
+            </div>
+        </div>
 
     `;
 }
@@ -2702,6 +2904,7 @@ function openDashboardStats(type){
                         ${new Date(best.entry.time).toLocaleDateString("de-DE")}
                     </div>
                 </div>
+                
 
                 <div class="dashboard-stat-value">
                     <b>${worst.value.toFixed(1)}%</b>
@@ -3499,7 +3702,6 @@ function closeBadgeDetail(){
     selectedBadgeCategory = null;
     selectedBadgeStage = null;
 }
-
 function getBadgeStages(category){
 
     if(category === "rounds"){
@@ -3523,9 +3725,49 @@ function getBadgeStages(category){
     if(category === "perfect"){
         return [
             {tier:"bronze", target:1, emoji:"💯"},
-            {tier:"silver", target:5, emoji:"💯"},
-            {tier:"gold", target:10, emoji:"💯"},
-            {tier:"diamond", target:25, emoji:"💯"}
+            {tier:"silver", target:2, emoji:"💯"},
+            {tier:"gold", target:3, emoji:"💯"},
+            {tier:"diamond", target:5, emoji:"💯"}
+        ];
+    }
+
+    // NEU: Scharfschütze
+    if(category === "sharpshooter"){
+        return [
+            {tier:"bronze", target:3, emoji:"🎯"},
+            {tier:"silver", target:5, emoji:"🎯"},
+            {tier:"gold", target:10, emoji:"🎯"},
+            {tier:"diamond", target:25, emoji:"🎯"}
+        ];
+    }
+
+    // NEU: Alleine
+    if(category === "alone"){
+        return [
+            {tier:"bronze", target:10, emoji:"👤"},
+            {tier:"silver", target:25, emoji:"👤"},
+            {tier:"gold", target:50, emoji:"👤"},
+            {tier:"diamond", target:100, emoji:"👤"}
+        ];
+    }
+
+    // NEU: Zu zweit
+    if(category === "2er"){
+        return [
+            {tier:"bronze", target:10, emoji:"👥"},
+            {tier:"silver", target:25, emoji:"👥"},
+            {tier:"gold", target:50, emoji:"👥"},
+            {tier:"diamond", target:100, emoji:"👥"}
+        ];
+    }
+
+    // NEU: Team
+    if(category === "team"){
+        return [
+            {tier:"bronze", target:10, emoji:"👨‍👩‍👧‍👦"},
+            {tier:"silver", target:25, emoji:"👨‍👩‍👧‍👦"},
+            {tier:"gold", target:50, emoji:"👨‍👩‍👧‍👦"},
+            {tier:"diamond", target:100, emoji:"👨‍👩‍👧‍👦"}
         ];
     }
 
@@ -3543,11 +3785,14 @@ function getBadgeCurrentValue(category){
         return streaks.longest;
     }
 
+    // Bestehendes Abzeichen: perfekte Runden
     if(category === "perfect"){
 
         return data.v.filter(e => {
 
-            const hitRate = e.w > 0 ? (e.t / e.w) * 100 : 0;
+            const hitRate = e.w > 0
+                ? (e.t / e.w) * 100
+                : 0;
 
             const emptyAverage = e.e;
 
@@ -3559,6 +3804,43 @@ function getBadgeCurrentValue(category){
             );
 
         }).length;
+    }
+
+    // NEU: Scharfschütze
+    // Jede Runde mit 100% Trefferquote zählt.
+    if(category === "sharpshooter"){
+
+        return data.v.filter(e => {
+
+            if(Number(e.w) <= 0) return false;
+
+            return Number(e.t) === Number(e.w);
+
+        }).length;
+    }
+
+    // NEU: alleine gespielt
+    if(category === "alone"){
+
+        return data.v.filter(e =>
+            (e.teamSize || "team") === "alone"
+        ).length;
+    }
+
+    // NEU: zu zweit gespielt
+    if(category === "2er"){
+
+        return data.v.filter(e =>
+            (e.teamSize || "team") === "2er"
+        ).length;
+    }
+
+    // NEU: im Team gespielt
+    if(category === "team"){
+
+        return data.v.filter(e =>
+            (e.teamSize || "team") === "team"
+        ).length;
     }
 
     return 0;
@@ -3576,6 +3858,22 @@ function getBadgeCategoryName(category){
 
     if(category === "perfect"){
         return "Perfekte Runden";
+    }
+
+    if(category === "sharpshooter"){
+        return "Scharfschütze";
+    }
+
+    if(category === "alone"){
+        return "Alleine gespielt";
+    }
+
+    if(category === "2er"){
+        return "Zu zweit gespielt";
+    }
+
+    if(category === "team"){
+        return "Im Team gespielt";
     }
 
     return "Abzeichen";
