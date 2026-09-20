@@ -833,6 +833,10 @@ body.dark .badge-app-icon-button{
     color:white;
 }
 
+#teamSize {
+    width: 100%;
+}
+
 @media (max-width:500px){
 
     #badgeList{
@@ -868,6 +872,50 @@ body.dark .badge-app-icon-button{
     to {
         transform: scale(2.4);
     }
+}
+
+.win-streak-active {
+    position: relative;
+    overflow: visible;
+}
+
+.win-streak-active::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 17px;
+    background: linear-gradient(
+        45deg,
+        #ff4500,
+        #ff8c00,
+        #ffd700,
+        #ff4500,
+        #ff2200
+    );
+    background-size: 300% 300%;
+    z-index: -1;
+    animation: streakBorderFire 1.5s ease-in-out infinite;
+}
+
+@keyframes streakBorderFire {
+    0% {
+        background-position: 0% 50%;
+        transform: scale(1);
+    }
+
+    50% {
+        background-position: 100% 50%;
+        transform: scale(1.02);
+    }
+
+    100% {
+        background-position: 0% 50%;
+        transform: scale(1);
+    }
+}
+
+body.dark .win-streak-active::before {
+    opacity: 0.9;
 }
 
 /* ===== MOBILE ===== */
@@ -967,7 +1015,7 @@ body.dark .badge-app-icon-button{
         <div class="dash-label">Treffer</div>
     </div>
 
-    <div class="dash-card dashboard-clickable" onclick="openDashboardStats('win')">
+    <div id="winDashCard" class="dash-card dashboard-clickable" onclick="openDashboardStats('win')">
     <div class="dash-value" id="dWin">0%</div>
     <div class="dash-label">Siege</div>
 </div>
@@ -999,6 +1047,16 @@ body.dark .badge-app-icon-button{
 
 <label><input type="checkbox" id="win"> Gewonnen</label>
 <label><input type="checkbox" id="tropf"> Getropft</label>
+
+<div class="select-box" style="margin-top:6px; width:50%;">
+    <div class="label">Teamgröße:</div>
+    <select id="teamSize">
+        <option value="alone">Alleine</option>
+        <option value="2er">2er</option>
+        <option value="team" selected>Team</option>
+    </select>
+</div>
+
 <div class="row-select">
 
     <div class="select-box">
@@ -1045,6 +1103,14 @@ body.dark .badge-app-icon-button{
     <option value="all">Alle Orte</option>
 </select>
 
+<select id="filterTeamSizeHome" onchange="stats()">
+    <option value="all">Alle Teamgrößen</option>
+    <option value="alone">Alleine</option>
+    <option value="2er">2er</option>
+    <option value="team">Team</option>
+</select>
+
+
 <select id="graphType" onchange="updateChart()">
     <option value="score">Score</option>
     <option value="hit">Trefferquote</option>
@@ -1082,6 +1148,13 @@ body.dark .badge-app-icon-button{
     <select id="filterPlace" onchange="openV()">
     <option value="all">Alle Orte</option>
 </select>
+
+    <select id="filterTeamSize" onchange="openV()">
+        <option value="all">Alle Teamgrößen</option>
+        <option value="alone">Alleine</option>
+        <option value="2er">2er</option>
+        <option value="team">Team</option>
+    </select>
 
 </div>
 
@@ -1762,6 +1835,15 @@ function getFilteredData(){
         );
     }
 
+    let teamSizeFilter =
+    document.getElementById("filterTeamSizeHome")?.value || "all";
+
+if(teamSizeFilter !== "all"){
+    entries = entries.filter(e =>
+        (e.teamSize || "team") === teamSizeFilter
+    );
+}
+
     return entries;
 }
 
@@ -2330,6 +2412,16 @@ const streaks = calculateWinStreaks();
 const currentStreakElement = document.getElementById("dCurrentWinStreak");
 const longestStreakElement = document.getElementById("dLongestWinStreak");
 
+const winDashCard = document.getElementById("winDashCard");
+
+if(winDashCard){
+    if(streaks.current >= 2){
+        winDashCard.classList.add("win-streak-active");
+    }else{
+        winDashCard.classList.remove("win-streak-active");
+    }
+}
+
 if(currentStreakElement){
     currentStreakElement.innerHTML =
         streaks.current >= 2
@@ -2363,6 +2455,7 @@ let e = adjustE(eRaw, drink);
 
 let win = winInput().checked;
 let tropf = tropfInput().checked;
+let teamSize = document.getElementById("teamSize").value;
 
     let hasError = false;
 
@@ -2415,13 +2508,14 @@ if(hasError) return;
         }
     }
 
-    const newEntry = {
-    w,
-    t,
-    win,
+    const newEntry = { 
+    w, 
+    t, 
+    win, 
     tropf,
-
-    place: document.getElementById("place").value,
+    teamSize,
+ 
+    place: document.getElementById("place").value, 
 
     drink,
     e,
@@ -2762,7 +2856,8 @@ function openV(){
 
     let placeFilter =
         document.getElementById("filterPlace")?.value || "all";
-
+let teamSizeFilter =
+    document.getElementById("filterTeamSize")?.value || "all";
 
     // =========================================================
     // ALLE RUNDEN chronologisch sortieren
@@ -2798,6 +2893,14 @@ function openV(){
 
         if(placeFilter !== "all" && e.place !== placeFilter){
             return false;
+        }
+
+                if(teamSizeFilter !== "all"){
+            const size = e.teamSize || "team";
+
+            if(size !== teamSizeFilter){
+                return false;
+            }
         }
 
         if(filter === "win"){
@@ -2889,6 +2992,18 @@ function openV(){
                 <b>Ort</b>
                 <span>${e.place || "-"}</span>
             </div>
+            <div class="row"> 
+    <b>Teamgröße</b> 
+    <span>
+        ${
+            e.teamSize === "alone"
+                ? "Alleine"
+                : e.teamSize === "2er"
+                    ? "2er"
+                    : "Team"
+        }
+    </span> 
+</div>
 
             <div class="row">
                 <b>Würfe</b>
@@ -2985,7 +3100,9 @@ function editEntry(i){
     winInput().checked = e.win;
     tropfInput().checked = e.tropf;
 
-    document.getElementById("drink").value = e.drink || "05";
+document.getElementById("teamSize").value = e.teamSize || "team";
+ 
+document.getElementById("drink").value = e.drink || "05";
     document.getElementById("place").value = e.place || "";
     document.getElementById("saveBtn").innerText = "Speichern";
 
@@ -3045,6 +3162,7 @@ function clear(){
 
     winInput().checked = false;
     tropfInput().checked = false;
+    document.getElementById("teamSize").value = "team";
 
     // Standardgetränk wieder auswählen
     document.getElementById("drink").value =
