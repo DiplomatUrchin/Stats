@@ -1194,26 +1194,6 @@ if(!data){
     data = {
         g: { w:0,t:0,r:0,win:0,tropf:0, eS:0,eC:0 },
         places: [],
-        drinks: [
-            {
-                id: "05",
-                name: "Bier",
-                size: "0,5",
-                isBeer: true
-            },
-            {
-                id: "033",
-                name: "Bier",
-                size: "0,33",
-                isBeer: true
-            },
-            {
-                id: "small",
-                name: "Getränk",
-                size: "0,5",
-                isBeer: false
-            }
-        ],
         defaultDrink: "05",
         v: [],
         scoreGoals: []
@@ -1221,61 +1201,17 @@ if(!data){
 } else {
     if(!data.places) data.places = [];
     if(!data.defaultPlace) data.defaultPlace = "";
-
-    if(!data.drinks){
-        data.drinks = [
-            {
-                id: "05",
-                name: "Bier",
-                size: "0,5",
-                isBeer: true
-            },
-            {
-                id: "033",
-                name: "Bier",
-                size: "0,33",
-                isBeer: true
-            },
-            {
-                id: "small",
-                name: "Getränk",
-                size: "0,5",
-                isBeer: false
-            }
-        ];
-    }
-
-    if(!data.defaultDrink){
-        data.defaultDrink = data.drinks[0]?.id || "";
-    }
-
+    if(!data.defaultDrink) data.defaultDrink = "05";
     if(!data.scoreGoals) data.scoreGoals = [];
 }
 
-function adjustE(e, drinkId){
+function adjustE(e, drink){
+    if(e === null || isNaN(e)) return null;
 
-    if(e === null || isNaN(e)){
-        return null;
-    }
+    if(drink === "033") return e + 1;
+    if(drink === "small") return e * 1.5;
 
-    const drink =
-        data.drinks?.find(
-            item => item.id === drinkId
-        );
-
-    if(!drink){
-        return e;
-    }
-
-    if(!drink.isBeer){
-        return e * 1.5;
-    }
-
-    if(drink.size === "0,33"){
-        return e + 1;
-    }
-
-    return e;
+    return e; // Bier 0,5
 }
 
 function save(){
@@ -2848,6 +2784,28 @@ function handlePeriodChange() {
     }
 }
 
+function setDefaultDrink(){
+
+    data.defaultDrink =
+        document.getElementById("defaultDrinkSelect").value;
+
+    save();
+
+    // Hauptauswahl sofort aktualisieren
+    document.getElementById("drink").value =
+        data.defaultDrink;
+
+    // Settings-Auswahl synchron halten
+    document.getElementById("defaultDrinkSelect").value =
+        data.defaultDrink;
+
+        document.getElementById("drink").value =
+    data.defaultDrink || "05";
+
+    document.getElementById("defaultDrinkSelect").value =
+    data.defaultDrink || "05";
+}
+
 function getEntryScore(e){
 
     const w = Number(e.w) || 0;
@@ -3109,41 +3067,6 @@ function formatScoreChange(change){
     return sign + formatted;
 }
 
-function getDrinkLabel(drinkId){
-
-    const id = String(drinkId ?? "").trim();
-
-    const drink = Array.isArray(data.drinks)
-        ? data.drinks.find(
-            item => String(item.id) === id
-        )
-        : null;
-
-    if(drink){
-
-        const icon = drink.isBeer
-            ? "🍺"
-            : "🥤";
-
-        return `${icon} ${drink.name} ${drink.size}`;
-    }
-
-    // Rückwärtskompatibilität für bereits gespeicherte Einträge
-    if(id === "05"){
-        return "🍺 Bier 0,5";
-    }
-
-    if(id === "033"){
-        return "🍺 Bier 0,33";
-    }
-
-    if(id === "small"){
-        return "🥤 Getränk 0,5";
-    }
-
-    return "Unbekanntes Getränk";
-}
-
 function openV(){
 
     page("verlauf");
@@ -3277,12 +3200,20 @@ let teamSizeFilter =
             <div class="small">
                 ${new Date(e.time).toLocaleDateString("de-DE")}
             </div>
+
             <div class="row">
-    <b>Getränk</b>
-    <span>
-        ${getDrinkLabel(e.drink)}
-    </span>
-</div>
+                <b>Getränk</b>
+                <span>
+                    ${
+                        e.drink === "05"
+                            ? "🍺 Bier 0,5"
+                            : e.drink === "033"
+                                ? "🍺 Bier 0,33"
+                                : "🚫 Kein Bier"
+                    }
+                </span>
+            </div>
+
             <div class="row">
                 <b>Ort</b>
                 <span>${e.place || "-"}</span>
@@ -3490,12 +3421,18 @@ tropfInput().addEventListener("change", () => {
 
 stats();
 refreshPlaces();
-refreshDrinks();
 renderPinnedScoreGoal();
 
 document.getElementById("drink").value =
     data.defaultDrink || "05";
 
+const defaultDrinkSelect =
+    document.getElementById("defaultDrinkSelect");
+
+if(defaultDrinkSelect){
+    defaultDrinkSelect.value =
+        data.defaultDrink || "05";
+}
 
 if("serviceWorker" in navigator){
     navigator.serviceWorker.register("service-worker.js");
@@ -3655,73 +3592,6 @@ function refreshPlaces(){
 
     filterPlaceHome.value = currentHomeFilter || "all";
 }
-}
-
-function refreshDrinks(){
-
-    const drinkSelect =
-        document.getElementById("drink");
-
-    const defaultDrinkSelect =
-        document.getElementById("defaultDrinkSelect");
-
-    if(!data.drinks){
-        data.drinks = [];
-    }
-
-    function createOptions(select, includeEmpty = false){
-
-        if(!select) return;
-
-        const currentValue = select.value;
-
-        select.innerHTML = includeEmpty
-            ? `<option value="">-</option>`
-            : "";
-
-        data.drinks.forEach(drink => {
-
-            const beerIcon = drink.isBeer ? "🍺" : "🥤";
-
-            const label =
-                `${beerIcon} ${drink.name} ${drink.size}`;
-
-            select.innerHTML += `
-                <option value="${drink.id}">
-                    ${label}
-                </option>
-            `;
-        });
-
-        if(
-            data.drinks.some(drink =>
-                drink.id === currentValue
-            )
-        ){
-            select.value = currentValue;
-        }
-    }
-
-    createOptions(drinkSelect);
-    createOptions(defaultDrinkSelect);
-
-    if(
-        drinkSelect &&
-        data.drinks.some(drink =>
-            drink.id === data.defaultDrink
-        )
-    ){
-        drinkSelect.value = data.defaultDrink;
-    }
-
-    if(
-        defaultDrinkSelect &&
-        data.drinks.some(drink =>
-            drink.id === data.defaultDrink
-        )
-    ){
-        defaultDrinkSelect.value = data.defaultDrink;
-    }
 }
 
 function closePlaces(){
@@ -4362,318 +4232,6 @@ function renderDashboardBadgeIcon(){
     el.textContent = stage.emoji;
 }
 
-function manageDrinks(){
-
-    if(!data.drinks){
-        data.drinks = [];
-    }
-
-    renderDrinksModal();
-
-    document.getElementById("drinkModal").style.display = "flex";
-}
-
-function closeDrinks(){
-
-    document.getElementById("drinkModal").style.display = "none";
-}
-
-function addDrink(){
-
-    const nameInput =
-        document.getElementById("drinkNameInput");
-
-    const sizeInput =
-        document.getElementById("drinkSizeInput");
-
-    const beerInput =
-        document.getElementById("drinkBeerInput");
-
-    const name = nameInput.value.trim();
-    const size = sizeInput.value;
-    const isBeer = beerInput.checked;
-
-    if(!name){
-        alert("Bitte einen Namen eingeben.");
-        return;
-    }
-
-    if(size !== "0,5" && size !== "0,33"){
-        alert("Bitte eine gültige Größe auswählen.");
-        return;
-    }
-
-    const id =
-        "drink_" +
-        Date.now() +
-        "_" +
-        Math.random().toString(36).substring(2, 8);
-
-    data.drinks.push({
-        id,
-        name,
-        size,
-        isBeer
-    });
-
-    save();
-
-    nameInput.value = "";
-    sizeInput.value = "0,5";
-    beerInput.checked = false;
-
-    renderDrinksModal();
-    refreshDrinks();
-}
-
-function deleteDrink(index){
-
-    const drink =
-        data.drinks[index];
-
-    if(!drink) return;
-
-    if(data.drinks.length <= 1){
-        alert("Mindestens ein Getränk muss vorhanden sein.");
-        return;
-    }
-
-    if(!confirm(
-        `Getränk „${drink.name} ${drink.size}“ löschen?`
-    )){
-        return;
-    }
-
-    if(data.defaultDrink === drink.id){
-
-        const replacement =
-            data.drinks.find(
-                item => item.id !== drink.id
-            );
-
-        data.defaultDrink =
-            replacement ? replacement.id : "";
-    }
-
-    data.drinks.splice(index, 1);
-
-    save();
-    refreshDrinks();
-    renderDrinksModal();
-}
-
-function setDefaultDrinkById(index){
-
-    const drink =
-        data.drinks[index];
-
-    if(!drink) return;
-
-    data.defaultDrink = drink.id;
-
-    save();
-    refreshDrinks();
-    renderDrinksModal();
-}
-
-function renderDrinksModal(){
-
-    const list =
-        document.getElementById("drinkModalList");
-
-    if(!list) return;
-
-    list.innerHTML = "";
-
-    data.drinks.forEach((drink, index) => {
-
-        const div =
-            document.createElement("div");
-
-        div.className = "card";
-
-        div.style.display = "flex";
-        div.style.justifyContent = "space-between";
-        div.style.alignItems = "center";
-        div.style.gap = "8px";
-
-        const icon =
-            drink.isBeer ? "🍺" : "🥤";
-
-        const label =
-            `${icon} ${drink.name} ${drink.size}`;
-
-        div.innerHTML = `
-            <span>
-                ${label}
-            </span>
-
-            <div style="display:flex; gap:6px;">
-                <button
-                    class="small-btn ${
-                        data.defaultDrink === drink.id
-                            ? "active-default"
-                            : ""
-                    }"
-                    onclick="setDefaultDrinkById(${index})">
-                    ${
-                        data.defaultDrink === drink.id
-                            ? "Standard"
-                            : "Als Standard"
-                    }
-                </button>
-
-                <button
-                    class="small-btn"
-                    onclick="editDrink(${index})">
-                    Bearbeiten
-                </button>
-
-                <button
-                    class="small-btn"
-                    onclick="deleteDrink(${index})">
-                    Löschen
-                </button>
-            </div>
-        `;
-
-        list.appendChild(div);
-    });
-}
-
-function editDrink(index){
-
-    const drink =
-        data.drinks[index];
-
-    if(!drink) return;
-
-    const nameInput =
-        document.getElementById("drinkNameInput");
-
-    const sizeInput =
-        document.getElementById("drinkSizeInput");
-
-    const beerInput =
-        document.getElementById("drinkBeerInput");
-
-    const editIdInput =
-        document.getElementById("drinkEditIdInput");
-
-    if(!nameInput || !sizeInput || !beerInput){
-        return;
-    }
-
-    // Werte ins Formular laden
-    nameInput.value = drink.name;
-    sizeInput.value = drink.size;
-    beerInput.checked = drink.isBeer;
-
-    // Merken, welches Getränk bearbeitet wird
-    if(editIdInput){
-        editIdInput.value = index;
-    } else {
-        // Fallback: neues verstecktes Input-Feld anlegen
-        const hidden = document.createElement("input");
-        hidden.type = "hidden";
-        hidden.id = "drinkEditIdInput";
-        hidden.value = index;
-        document.getElementById("drinkModal").appendChild(hidden);
-    }
-
-    // Button-Text ändern
-    const addBtn =
-        document.querySelector(
-            '#drinkModal button[onclick="addDrink()"]'
-        );
-
-    if(addBtn){
-        addBtn.innerText = "Getränk speichern";
-        addBtn.setAttribute(
-            "onclick",
-            "saveDrink()"
-        );
-    }
-}
-
-function saveDrink(){
-
-    const nameInput =
-        document.getElementById("drinkNameInput");
-
-    const sizeInput =
-        document.getElementById("drinkSizeInput");
-
-    const beerInput =
-        document.getElementById("drinkBeerInput");
-
-    const editIdInput =
-        document.getElementById("drinkEditIdInput");
-
-    const name = nameInput.value.trim();
-    const size = sizeInput.value;
-    const isBeer = beerInput.checked;
-
-    if(!name){
-        alert("Bitte einen Namen eingeben.");
-        return;
-    }
-
-    if(size !== "0,5" && size !== "0,33"){
-        alert("Bitte eine gültige Größe auswählen.");
-        return;
-    }
-
-    const index = editIdInput
-        ? parseInt(editIdInput.value, 10)
-        : null;
-
-    if(index === null || isNaN(index)){
-        alert("Fehler: Kein Getränk zum Bearbeiten ausgewählt.");
-        return;
-    }
-
-    const drink = data.drinks[index];
-
-    if(!drink){
-        alert("Getränk nicht gefunden.");
-        return;
-    }
-
-    // Daten aktualisieren
-    drink.name = name;
-    drink.size = size;
-    drink.isBeer = isBeer;
-
-    save();
-    refreshDrinks();
-    renderDrinksModal();
-
-    // Formular zurücksetzen
-    nameInput.value = "";
-    sizeInput.value = "0,5";
-    beerInput.checked = false;
-
-    // Button zurücksetzen
-    const addBtn =
-        document.querySelector(
-            '#drinkModal button[onclick="saveDrink()"]'
-        );
-
-    if(addBtn){
-        addBtn.innerText = "Getränk hinzufügen";
-        addBtn.setAttribute(
-            "onclick",
-            "addDrink()"
-        );
-    }
-
-    // Hidden-Feld entfernen
-    if(editIdInput){
-        editIdInput.remove();
-    }
-}
-
 function restoreSelectedBadgeIcon(){
 
     const savedIcon = localStorage.getItem(
@@ -4738,10 +4296,6 @@ renderDashboardBadgeIcon();
         Orte bearbeiten
     </button>
 
-    <button onclick="manageDrinks()">
-    Getränke bearbeiten
-</button>
-
     <button onclick="openScoreGoals()">
     Score-Ziele
 </button>
@@ -4749,6 +4303,20 @@ renderDashboardBadgeIcon();
 <button onclick="openBadges()">
     Abzeichen
 </button>
+
+    <div class="settings-section">
+
+    <div style="font-size:12px; opacity:0.7; margin-bottom:6px;">
+        Standardgetränk
+    </div>
+
+    <select id="defaultDrinkSelect" onchange="setDefaultDrink()">
+        <option value="05">Bier 0,5</option>
+        <option value="033">Bier 0,33</option>
+        <option value="small">Kein Bier</option>
+    </select>
+
+</div>
 
     <button onclick="exportData()">
         Export
@@ -4861,55 +4429,5 @@ renderDashboardBadgeIcon();
 </div>
 </div>
 
-<div id="drinkModal" style="
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.5);
-    z-index:3000;
-    align-items:center;
-    justify-content:center;
-">
-
-    <div class="place-modal-content">
-
-        <h3>Getränke bearbeiten</h3>
-        <input
-    type="hidden"
-    id="drinkEditIdInput"
->
-        <input
-            id="drinkNameInput"
-            placeholder="Name des Getränks"
-        >
-
-        <select id="drinkSizeInput">
-            <option value="0,5">0,5 Liter</option>
-            <option value="0,33">0,33 Liter</option>
-        </select>
-
-        <label>
-            <input
-                type="checkbox"
-                id="drinkBeerInput"
-            >
-            Ist ein Bier
-        </label>
-
-        <button onclick="addDrink()">
-            Getränk hinzufügen
-        </button>
-
-        <div
-            id="drinkModalList"
-            style="margin-top:10px;">
-        </div>
-
-        <button onclick="closeDrinks()">
-            Fertig
-        </button>
-
-    </div>
-</div>
 </body>
 </html>
