@@ -26,6 +26,52 @@
     transform: scale(0.96);
 }
 
+#dashboardBadgeIcon {
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+#dashboardBadgeIcon.bronze {
+    background: #CD7F32;
+    color: #ffffff;
+}
+
+#dashboardBadgeIcon.silver {
+    background: #A8A8A8;
+    color: #ffffff;
+}
+
+#dashboardBadgeIcon.gold {
+    background: #D4AF37;
+    color: #ffffff;
+}
+
+#dashboardBadgeIcon.diamond {
+    background: #8DE7FF;
+    color: #00566b;
+}
+
+/* Dunkler Modus */
+body.dark #dashboardBadgeIcon.bronze {
+    background: #753126;
+    color: #ffffff;
+}
+
+body.dark #dashboardBadgeIcon.silver {
+    background: #A8A8A8;
+    color: #ffffff;
+}
+
+body.dark #dashboardBadgeIcon.gold {
+    background: #DBB300;
+    color: #ffffff;
+}
+
+body.dark #dashboardBadgeIcon.diamond {
+    background: #00A4DB;
+    color: #ffffff;
+}
+
 .dashboard-stat-modal {
     display: none;
     position: fixed;
@@ -854,6 +900,22 @@ body.dark .badge-app-icon-button{
     align-items: center;
     justify-content: center;
     font-size: 30px;
+}
+
+#dashboardBadgeIcon.bronze {
+    color: #753126;
+}
+
+#dashboardBadgeIcon.silver {
+    color: #A8A8A8;
+}
+
+#dashboardBadgeIcon.gold {
+    color: #DBB300;
+}
+
+#dashboardBadgeIcon.diamond {
+    color: #00A4DB;
 }
 
 @media (max-width:500px){
@@ -4599,6 +4661,7 @@ function renderDashboardBadgeIcon(){
 
     if(!selected){
         el.innerHTML = "";
+        el.className = "";
         return;
     }
 
@@ -4615,9 +4678,23 @@ function renderDashboardBadgeIcon(){
 
     if(!stage){
         el.innerHTML = "";
+        el.className = "";
         return;
     }
 
+    // Alte Tier-Klassen entfernen
+    el.classList.remove(
+        "bronze",
+        "silver",
+        "gold",
+        "diamond",
+        "locked"
+    );
+
+    // Neue Tier-Klasse setzen
+    el.classList.add(tier);
+
+    // Emoji anzeigen
     el.textContent = stage.emoji;
 }
 
