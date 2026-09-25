@@ -1297,25 +1297,62 @@ function calculateRequiredValues(targetScore, futureRounds){
         return null;
     }
 
+    /*
+     * Noch keine bisherigen Runden:
+     * Es gibt noch keine aktuellen Werte,
+     * deshalb wird eine einfache Ausgangsbasis verwendet.
+     */
     if(current.rounds === 0){
+
         return {
             targetScore,
             targetHit: 0,
             targetWin: 0,
             targetEmpty: 3,
             futureHit: 0,
-            futureWin: 0,
+            futureEmpty: 3,
             futureWins: 0,
+            futureRounds,
             current
         };
     }
 
     let best = null;
 
+    /*
+     * Wir testen mögliche Endwerte.
+     *
+     * Wichtig:
+     * Die Trefferquote darf niemals über 100 % liegen.
+     */
     for(let hit = 0; hit <= 100; hit += 0.5){
 
-        for(let win = 0; win <= 100; win += 0.5){
+        for(let futureWins = 0; futureWins <= futureRounds; futureWins++){
 
+            /*
+             * Tatsächliche zukünftige Siegesquote.
+             */
+            let totalWins =
+                current.wins + futureWins;
+
+            let totalRounds =
+                current.rounds + futureRounds;
+
+            let win =
+                totalRounds > 0
+                    ? totalWins / totalRounds * 100
+                    : 0;
+
+            /*
+             * Win-Quote sicher begrenzen.
+             */
+            win = Math.max(0, Math.min(100, win));
+
+            /*
+             * Welcher Leer-Durchschnitt wird benötigt,
+             * damit zusammen mit Treffer- und Siegesquote
+             * der gewünschte Score entsteht?
+             */
             let remaining =
                 targetScore -
                 (hit / 100) * 40 -
@@ -1325,14 +1362,114 @@ function calculateRequiredValues(targetScore, futureRounds){
                 continue;
             }
 
-            let empty = 120 / remaining;
+            let empty =
+                120 / remaining;
 
-            if(!isFinite(empty) || empty <= 0){
+            if(
+                !isFinite(empty) ||
+                empty <= 0
+            ){
                 continue;
             }
 
-            let changeHit = (hit - current.hit) / 100;
-            let changeWin = (win - current.win) / 100;
+            /*
+             * Durchschnittliche Anzahl Würfe pro Runde.
+             */
+            let averageThrows =
+                current.rounds > 0
+                    ? current.w / current.rounds
+                    : 0;
+
+            let futureThrows =
+                averageThrows * futureRounds;
+
+            /*
+             * Wenn bisher Würfe vorhanden sind,
+             * berechnen wir daraus die tatsächlich
+             * benötigte Trefferquote für die nächsten Runden.
+             */
+            let futureHit;
+
+            if(futureThrows > 0){
+
+                futureHit =
+                    (
+                        hit / 100 *
+                        (current.w + futureThrows)
+                        -
+                        current.t
+                    )
+                    /
+                    futureThrows
+                    * 100;
+
+            } else {
+
+                futureHit = hit;
+            }
+
+            /*
+             * UNMÖGLICHE Trefferquoten verwerfen.
+             */
+            if(
+                !isFinite(futureHit) ||
+                futureHit < 0 ||
+                futureHit > 100
+            ){
+                continue;
+            }
+
+            /*
+             * Anzahl bisheriger Leer-Werte.
+             */
+            let currentEmptyCount =
+                data.v.filter(e =>
+                    e.eRaw !== null &&
+                    e.eRaw !== undefined &&
+                    !isNaN(e.eRaw)
+                ).length;
+
+            let futureEmptyCount =
+                futureRounds;
+
+            let futureEmpty;
+
+            if(futureEmptyCount > 0){
+
+                futureEmpty =
+                    (
+                        empty *
+                        (currentEmptyCount + futureEmptyCount)
+                        -
+                        current.empty * currentEmptyCount
+                    )
+                    /
+                    futureEmptyCount;
+
+            } else {
+
+                futureEmpty = empty;
+            }
+
+            /*
+             * Auch der zukünftige Leer-Wert muss möglich sein.
+             */
+            if(
+                !isFinite(futureEmpty) ||
+                futureEmpty <= 0
+            ){
+                continue;
+            }
+
+            /*
+             * Wie stark müssen sich die einzelnen Werte
+             * gegenüber den aktuellen Werten verändern?
+             */
+            let changeHit =
+                (hit - current.hit) / 100;
+
+            let changeWin =
+                (win - current.win) / 100;
 
             let emptyBase =
                 Math.max(current.empty, 0.1);
@@ -1340,6 +1477,10 @@ function calculateRequiredValues(targetScore, futureRounds){
             let changeEmpty =
                 (empty - emptyBase) / emptyBase;
 
+            /*
+             * Wir bevorzugen eine Lösung,
+             * bei der sich die Werte möglichst wenig verändern.
+             */
             let distance =
                 changeHit * changeHit +
                 changeWin * changeWin +
@@ -1349,102 +1490,65 @@ function calculateRequiredValues(targetScore, futureRounds){
                 best === null ||
                 distance < best.distance
             ){
+
                 best = {
                     hit,
                     win,
                     empty,
+                    futureHit,
+                    futureEmpty,
+                    futureWins,
                     distance
                 };
             }
         }
     }
 
+    /*
+     * Keine physisch mögliche Kombination gefunden.
+     */
     if(!best){
         return null;
     }
 
-    let averageThrows =
-        current.rounds > 0
-            ? current.w / current.rounds
-            : 0;
-
-    let futureThrows =
-        averageThrows * futureRounds;
-
-    let futureHit;
-
-    if(futureThrows > 0){
-
-        futureHit =
-            (
-                best.hit / 100 *
-                (current.w + futureThrows)
-                -
-                current.t
-            )
-            /
-            futureThrows
-            * 100;
-
-    } else {
-        futureHit = best.hit;
-    }
-
-    let currentEmptyCount =
-        data.v.filter(e =>
-            e.eRaw !== null &&
-            e.eRaw !== undefined &&
-            !isNaN(e.eRaw)
-        ).length;
-
-    let futureEmptyCount = futureRounds;
-
-    let futureEmpty;
-
-    if(futureEmptyCount > 0){
-
-        futureEmpty =
-            (
-                best.empty *
-                (currentEmptyCount + futureEmptyCount)
-                -
-                current.empty * currentEmptyCount
-            )
-            /
-            futureEmptyCount;
-
-    } else {
-        futureEmpty = best.empty;
-    }
-
-    let currentWinCount = current.wins;
-
-    let requiredTotalWins =
-        Math.ceil(
-            best.win / 100 *
-            (current.rounds + futureRounds)
-        );
-
-    let futureWins =
-        requiredTotalWins - currentWinCount;
-
-    if(futureWins < 0){
-        futureWins = 0;
-    }
-
-    if(futureWins > futureRounds){
-        futureWins = futureRounds;
-    }
-
     return {
         targetScore,
-        targetHit: best.hit,
-        targetWin: best.win,
-        targetEmpty: best.empty,
-        futureHit,
-        futureEmpty,
-        futureWins,
+
+        targetHit:
+            best.hit,
+
+        targetWin:
+            best.win,
+
+        targetEmpty:
+            best.empty,
+
+        futureHit:
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    best.futureHit
+                )
+            ),
+
+        futureEmpty:
+            Math.max(
+                0,
+                best.futureEmpty
+            ),
+
+        futureWins:
+            Math.max(
+                0,
+                Math.min(
+                    futureRounds,
+                    best.futureWins
+                )
+            ),
+
         futureRounds,
+
         current
     };
 }
@@ -1586,7 +1690,7 @@ function renderScoreGoals(){
                 (goal.originalRounds || goal.futureRounds) - playedSinceStart
             );
 
-        let result;
+                let result;
 
         if(remainingRounds > 0){
 
@@ -1601,6 +1705,72 @@ function renderScoreGoals(){
                 goal.targetScore,
                 1
             );
+
+        }
+
+        /*
+         * Falls das Ziel mit den verbleibenden Runden
+         * nicht mehr erreichbar ist, kann die Berechnung
+         * null zurückgeben.
+         */
+        if(!result){
+
+            goal.result = null;
+
+            let div = document.createElement("div");
+
+            div.className = "score-goal-card";
+
+            div.innerHTML = `
+                <div style="
+                    font-weight:bold;
+                    font-size:16px;
+                    margin-bottom:10px;
+                ">
+                    Score-Ziel ${goal.targetScore.toFixed(1)}
+                </div>
+
+                <div class="row">
+                    <b>Status</b>
+                    <span>
+                        Mit den verbleibenden ${remainingRounds} Runden
+                        nicht berechenbar
+                    </span>
+                </div>
+
+                <div style="
+                    margin-top:10px;
+                    font-size:13px;
+                    opacity:0.75;
+                ">
+                    Für dieses Ziel gibt es unter den aktuellen
+                    Voraussetzungen keine mögliche Kombination.
+                </div>
+
+                <div style="
+                    display:flex;
+                    gap:8px;
+                    margin-top:12px;
+                ">
+
+                    <button
+                        class="small-btn ${goal.pinned ? "active-default" : ""}"
+                        onclick="togglePinScoreGoal(${goal.id})">
+                        ${goal.pinned ? "Angepinnt" : "Anpinnen"}
+                    </button>
+
+                    <button
+                        class="small-btn"
+                        onclick="deleteScoreGoal(${goal.id})">
+                        Löschen
+                    </button>
+
+                </div>
+            `;
+
+            list.appendChild(div);
+
+            return;
         }
 
         goal.result = result;
@@ -1737,7 +1907,7 @@ function renderPinnedScoreGoal(){
             - playedSinceStart
         );
 
-    const result =
+        const result =
         calculateRequiredValues(
             pinned.targetScore,
             remainingRounds > 0
@@ -1746,6 +1916,60 @@ function renderPinnedScoreGoal(){
         );
 
     pinned.result = result;
+
+    /*
+     * Wenn das Score-Ziel mit den verbleibenden
+     * Runden nicht mehr berechenbar ist, darf
+     * nicht auf result.targetWin usw. zugegriffen werden.
+     */
+    if(!result){
+
+        const card =
+            document.createElement("div");
+
+        card.className =
+            "score-goal-pinned";
+
+        card.innerHTML = `
+
+            <div class="score-goal-pinned-header">
+
+                <div>
+                    <div class="score-goal-pinned-title">
+                        Score-Ziel
+                    </div>
+
+                    <div class="score-goal-pinned-target">
+                        ${pinned.targetScore.toFixed(1)}
+                    </div>
+                </div>
+
+                <div class="score-goal-pinned-current">
+                    ${current.score.toFixed(1)}
+                </div>
+
+            </div>
+
+            <div class="score-goal-pinned-rounds">
+                Noch ${remainingRounds} Runden
+            </div>
+
+            <div style="
+                margin-top:10px;
+                font-size:13px;
+                opacity:0.75;
+            ">
+                Mit den verbleibenden Runden
+                ist dieses Score-Ziel aktuell
+                nicht berechenbar.
+            </div>
+
+        `;
+
+        container.appendChild(card);
+
+        return;
+    }
 
     const originalRequiredWins =
         Math.ceil(
