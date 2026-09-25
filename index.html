@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Statistik App3</title>
+<title>Statistik App2</title>
 
 <link rel="manifest" href="manifest.json">
 
@@ -1053,11 +1053,11 @@ body.dark .win-streak-active::before {
         <div class="dash-label">Ø Leer</div>
     </div>
 
-    <div class="dash-card">
-        <div class="dash-value" id="dTropf" style="font-size:14px;">0%</div>
-        <div class="dash-label">Tropf</div>
-    </div>
-    <div class="dash-card">
+    <div class="dash-card dashboard-clickable" onclick="openDashboardStats('tropf')">
+    <div class="dash-value" id="dTropf" style="font-size:14px;">0%</div>
+    <div class="dash-label">Tropf</div>
+</div>
+    <div class="dash-card dashboard-clickable" onclick="openDashboardStats('rounds')">
     <div class="dash-value" id="dRounds" style="font-size:14px;">0</div>
     <div class="dash-label">Runden</div>
 </div>
@@ -2870,6 +2870,10 @@ function openDashboardStats(type){
             b.value < a.value ? b : a
         );
 
+                let averageScore =
+            scoredEntries.reduce((sum, e) => sum + e.value, 0)
+            / scoredEntries.length;
+
         body.innerHTML = `
             <div class="dashboard-stat-value">
                 <b>${highest.value.toFixed(1)}</b>
@@ -2885,6 +2889,11 @@ function openDashboardStats(type){
                 <div class="small">
                     ${new Date(lowest.entry.time).toLocaleDateString("de-DE")}
                 </div>
+            </div>
+
+            <div class="dashboard-stat-value">
+                <b>${averageScore.toFixed(1)}</b>
+                <span>Durchschnittlicher Score pro Runde</span>
             </div>
         `;
     }
@@ -2919,6 +2928,10 @@ function openDashboardStats(type){
                 b.value < a.value ? b : a
             );
 
+                        let perfectHitRounds = hitEntries.filter(e =>
+                e.value >= 100
+            ).length;
+
             body.innerHTML = `
                 <div class="dashboard-stat-value">
                     <b>${best.value.toFixed(1)}%</b>
@@ -2927,7 +2940,10 @@ function openDashboardStats(type){
                         ${new Date(best.entry.time).toLocaleDateString("de-DE")}
                     </div>
                 </div>
-                
+                                <div class="dashboard-stat-value">
+                    <b>${perfectHitRounds}</b>
+                    <span>Runden mit 100% Trefferquote</span>
+                </div>
 
                 <div class="dashboard-stat-value">
                     <b>${worst.value.toFixed(1)}%</b>
@@ -2945,6 +2961,27 @@ function openDashboardStats(type){
     title.innerText = "Siege";
 
     const streaks = calculateWinStreaks();
+
+        let longestLossStreak = 0;
+    let currentLossStreak = 0;
+
+    const chronologicalEntries = entries
+        .slice()
+        .sort((a,b) => Number(a.time) - Number(b.time));
+
+    chronologicalEntries.forEach(e => {
+
+        if(e.win){
+            currentLossStreak = 0;
+        }else{
+            currentLossStreak++;
+
+            if(currentLossStreak > longestLossStreak){
+                longestLossStreak = currentLossStreak;
+            }
+        }
+
+    });
 
     const currentStreakHtml =
         streaks.current >= 2
@@ -2967,12 +3004,140 @@ function openDashboardStats(type){
             <span>Längste Siegesstreak</span>
         </div>
 
+                <div class="dashboard-stat-value">
+            <b>${longestLossStreak}</b>
+            <span>Längste Niederlagenserie</span>
+        </div>
+
         <div class="dashboard-stat-value">
             <b>${document.getElementById("dWin").innerText}</b>
             <span>Siegesquote</span>
         </div>
     `;
 }
+
+    if(type === "tropf"){
+
+        title.innerText = "Tropf";
+
+        let tropfEntries = entries.filter(e => e.tropf);
+
+        let lastTropf = null;
+
+        if(tropfEntries.length > 0){
+
+            lastTropf = tropfEntries.reduce((a,b) =>
+                Number(b.time) > Number(a.time) ? b : a
+            );
+
+        }
+
+        body.innerHTML = `
+
+            <div class="dashboard-stat-value">
+                <b>${tropfEntries.length}</b>
+                <span>Anzahl Tropfer</span>
+            </div>
+
+            <div class="dashboard-stat-value">
+
+                <b>
+                    ${
+                        lastTropf
+                            ? new Date(lastTropf.time).toLocaleDateString("de-DE")
+                            : "-"
+                    }
+                </b>
+
+                <span>Letzter Tropfer</span>
+
+                ${
+                    lastTropf
+                        ? `
+                            <div class="small">
+                                ${new Date(lastTropf.time).toLocaleTimeString(
+                                    "de-DE",
+                                    {
+                                        hour: "2-digit",
+                                        minute: "2-digit"
+                                    }
+                                )}
+                            </div>
+                        `
+                        : ""
+                }
+
+            </div>
+
+        `;
+    }
+
+        if(type === "rounds"){
+
+        title.innerText = "Runden";
+
+        const now = new Date();
+
+        // Heute
+        const todayStart = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate()
+        ).getTime();
+
+        // Montag dieser Woche
+        const weekStartDate = new Date(now);
+        const day = weekStartDate.getDay();
+
+        const daysSinceMonday =
+            day === 0 ? 6 : day - 1;
+
+        weekStartDate.setDate(
+            now.getDate() - daysSinceMonday
+        );
+
+        weekStartDate.setHours(0, 0, 0, 0);
+
+        const weekStart = weekStartDate.getTime();
+
+        // Erster Tag des Monats
+        const monthStart = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            1
+        ).getTime();
+
+        const roundsToday = entries.filter(e =>
+            Number(e.time) >= todayStart
+        ).length;
+
+        const roundsWeek = entries.filter(e =>
+            Number(e.time) >= weekStart
+        ).length;
+
+        const roundsMonth = entries.filter(e =>
+            Number(e.time) >= monthStart
+        ).length;
+
+        body.innerHTML = `
+
+            <div class="dashboard-stat-value">
+                <b>${roundsToday}</b>
+                <span>Runden heute</span>
+            </div>
+
+            <div class="dashboard-stat-value">
+                <b>${roundsWeek}</b>
+                <span>Runden diese Woche</span>
+            </div>
+
+            <div class="dashboard-stat-value">
+                <b>${roundsMonth}</b>
+                <span>Runden diesen Monat</span>
+            </div>
+
+        `;
+    }
 
     if(type === "empty"){
 
