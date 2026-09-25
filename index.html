@@ -18,6 +18,15 @@
         box-shadow 0.2s ease;
 }
 
+.card.tournament-round {
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+body.dark .card.tournament-round {
+    border: 2px solid rgba(255, 255, 255, 0.95);
+}
+
 .dashboard-clickable {
     cursor: pointer;
 }
@@ -1039,6 +1048,30 @@ body.dark .win-streak-active::before {
     }
 }
 
+@keyframes tournamentHighlight {
+    0%, 100% {
+        background-color: transparent;
+    }
+
+    50% {
+        background-color: rgba(255, 255, 255, 0.55);
+    }
+}
+
+.tournament-highlight {
+    animation: tournamentBlink 1.5s ease-in-out 1;
+}
+
+@keyframes tournamentBlink {
+    0%, 100% {
+        background-color: transparent;
+    }
+
+    50% {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+}
+
 @media (max-width:500px){
     #badgeList{
         grid-template-columns:repeat(3,1fr);
@@ -1131,6 +1164,22 @@ body.dark .win-streak-active::before {
 
 <label><input type="checkbox" id="win"> Gewonnen</label>
 <label><input type="checkbox" id="tropf"> Getropft</label>
+<label>
+    <input type="checkbox" id="isTournamentRound"
+           onchange="toggleTournamentSelect()">
+    Turnierrunde
+</label>
+
+<div id="tournamentSelectBox"
+     class="select-box"
+     style="display:none; width:50%; margin-bottom:8px;">
+
+    <div class="label">Turnier:</div>
+
+    <select id="roundTournament">
+        <option value="">Turnier auswählen</option>
+    </select>
+</div>
 
 <div class="select-box" style="margin-top:6px; width:50%;">
     <div class="label">Teamgröße:</div>
@@ -1195,6 +1244,17 @@ body.dark .win-streak-active::before {
 </select>
 
 
+<select id="chartTournamentFilter" onchange="updateChart()">
+    <option value="all">Alle Runden</option>
+    <option value="tournament">Ein bestimmtes Turnier</option>
+</select>
+
+<select id="chartTournamentSelect"
+        onchange="updateChart()"
+        style="display:none;">
+    <option value="">Turnier auswählen</option>
+</select>
+
 <select id="graphType" onchange="updateChart()">
     <option value="score">Score</option>
     <option value="hit">Trefferquote</option>
@@ -1258,13 +1318,15 @@ if(!data){
         places: [],
         defaultDrink: "05",
         v: [],
-        scoreGoals: []
+        scoreGoals: [],
+        tournaments: [],
     };
 } else {
     if(!data.places) data.places = [];
     if(!data.defaultPlace) data.defaultPlace = "";
     if(!data.defaultDrink) data.defaultDrink = "05";
     if(!data.scoreGoals) data.scoreGoals = [];
+    if(!data.tournaments) data.tournaments = [];
 }
 
 function adjustE(e, drink){
@@ -2203,6 +2265,20 @@ function calculateScore(entries){
 function updateChart(){
 
     let filtered = getFilteredData();
+
+    const tournamentFilter =
+    document.getElementById("chartTournamentFilter").value;
+
+const tournamentId =
+    document.getElementById("chartTournamentSelect").value;
+
+if(tournamentFilter === "tournament"){
+    filtered = tournamentId
+        ? filtered.filter(e =>
+            String(e.tournamentId) === String(tournamentId)
+        )
+        : [];
+}
     let mode = document.getElementById("xmode").value;
     let graphType = document.getElementById("graphType").value;
 
@@ -3024,6 +3100,8 @@ if(hasError) return;
     t, 
     win, 
     tropf,
+        isTournament: document.getElementById("isTournamentRound").checked,
+    tournamentId: document.getElementById("roundTournament").value,
     teamSize,
  
     place: document.getElementById("place").value, 
@@ -3035,6 +3113,8 @@ if(hasError) return;
     time: editIndex !== null
         ? data.v[editIndex].time
         : Date.now()
+
+        
 };
 
 if(editIndex !== null){
@@ -3056,6 +3136,56 @@ renderPinnedScoreGoal();
 renderBadges();
 restoreSelectedBadgeIcon();
 clear();
+}
+
+function jumpToTournament(id){
+    closeTournaments();
+
+    // Filter zurücksetzen, damit alle relevanten Runden sichtbar sind.
+    document.getElementById("filterResult").value = "all";
+    document.getElementById("filterPlace").value = "all";
+    document.getElementById("filterTeamSize").value = "all";
+
+    openV();
+
+    const entries = data.v
+        .map((e, index) => ({e, index}))
+        .filter(item =>
+            String(item.e.tournamentId) === String(id)
+        );
+
+    if(entries.length === 0){
+        alert("Für dieses Turnier gibt es noch keine Runden.");
+        return;
+    }
+
+    const firstIndex = entries[0].index;
+
+    const firstCard = document.querySelector(
+        `.card[data-entry-index="${firstIndex}"]`
+    );
+
+    if(firstCard){
+        firstCard.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
+
+    entries.forEach(item => {
+        const card = document.querySelector(
+            `.card[data-entry-index="${item.index}"]`
+        );
+
+        if(card){
+            card.classList.remove("tournament-highlight");
+
+            // Animation erneut auslösen
+            void card.offsetWidth;
+
+            card.classList.add("tournament-highlight");
+        }
+    });
 }
 
 function handlePeriodChange() {
@@ -3639,18 +3769,32 @@ let teamSizeFilter =
 
 
         let div = document.createElement("div");
-
+        div.dataset.entryIndex = data.v.indexOf(e);
         div.className =
-            "card " +
-            (e.win
-                ? "win"
-                : (e.tropf ? "loss-tropf" : "loss"));
+    "card " +
+    (e.win
+        ? "win"
+        : (e.tropf ? "loss-tropf" : "loss"));
+
+if(e.isTournament){
+    div.classList.add("tournament-round");
+}
+        
 
 
         div.innerHTML = `
             <div class="small">
                 ${new Date(e.time).toLocaleDateString("de-DE")}
             </div>
+
+            ${e.isTournament ? `
+    <div class="row">
+        <b>Turnier</b>
+        <span>${data.tournaments.find(
+    t => String(t.id) === String(e.tournamentId)
+)?.name || "Unbekannt"}</span>
+    </div>
+` : ""}
 
             <div class="row">
                 <b>Getränk</b>
@@ -3779,6 +3923,9 @@ function editEntry(i){
     winInput().checked = e.win;
     tropfInput().checked = e.tropf;
 
+    document.getElementById("isTournamentRound").checked = !!e.isTournament;
+document.getElementById("roundTournament").value = e.tournamentId || "";
+
 document.getElementById("teamSize").value = e.teamSize || "team";
  
 document.getElementById("drink").value = e.drink || "05";
@@ -3841,6 +3988,20 @@ function clear(){
 
     winInput().checked = false;
     tropfInput().checked = false;
+    const tournamentCheckbox =
+    document.getElementById("isTournamentRound");
+
+const tournamentBox =
+    document.getElementById("tournamentSelectBox");
+
+// Turniermodus beibehalten
+tournamentCheckbox.checked = true;
+
+// Auswahl sichtbar halten
+tournamentBox.style.display = "block";
+
+// Turnierliste aktualisieren
+refreshTournamentSelect();
     document.getElementById("teamSize").value = "team";
 
     // Standardgetränk wieder auswählen
@@ -3850,7 +4011,10 @@ function clear(){
     // Standardort wieder auswählen
     document.getElementById("place").value =
         data.defaultPlace || "";
+    document.getElementById("isTournamentRound").checked = false;
 
+document.getElementById("roundTournament").value = "";
+document.getElementById("roundTournament").style.display = "none";
     clearErrors();
 }
 
@@ -3872,6 +4036,8 @@ tropfInput().addEventListener("change", () => {
 
 stats();
 refreshPlaces();
+refreshTournamentSelect();
+refreshChartTournamentSelect();
 renderPinnedScoreGoal();
 
 document.getElementById("drink").value =
@@ -4250,6 +4416,49 @@ function getBadgeStages(category){
     return [];
 }
 
+function toggleTournamentSelect(){
+    const checked =
+        document.getElementById("isTournamentRound").checked;
+
+    document.getElementById("tournamentSelectBox").style.display =
+        checked ? "block" : "none";
+
+    if(checked){
+        refreshTournamentSelect();
+    } else {
+        document.getElementById("roundTournament").value = "";
+    }
+}
+
+function refreshTournamentSelect(){
+    const select = document.getElementById("roundTournament");
+    const selected = select.value;
+
+    select.innerHTML =
+        '<option value="">Turnier auswählen</option>';
+
+    data.tournaments.forEach(tournament => {
+        const option = document.createElement("option");
+        option.value = tournament.id;
+        option.textContent = tournament.name;
+        select.appendChild(option);
+    });
+
+    if(data.tournaments.some(t => String(t.id) === selected)){
+        select.value = selected;
+    }
+}
+
+document.getElementById("chartTournamentFilter")
+    .addEventListener("change", function(){
+        const select = document.getElementById("chartTournamentSelect");
+
+        select.style.display =
+            this.value === "tournament" ? "block" : "none";
+
+        updateChart();
+    });
+
 function getBadgeCurrentValue(category){
 
     if(category === "rounds"){
@@ -4348,6 +4557,34 @@ function getBadgeCategoryName(category){
 
     return "Abzeichen";
 }
+
+function refreshChartTournamentSelect(){
+    const select = document.getElementById("chartTournamentSelect");
+    const selected = select.value;
+
+    select.innerHTML = '<option value="">Turnier auswählen</option>';
+
+    data.tournaments.forEach(t => {
+        const option = document.createElement("option");
+        option.value = t.id;
+        option.textContent = t.name;
+        select.appendChild(option);
+    });
+
+    if(data.tournaments.some(t => String(t.id) === selected)){
+        select.value = selected;
+    }
+}
+
+document.getElementById("chartTournamentFilter")
+    .addEventListener("change", function(){
+        const select = document.getElementById("chartTournamentSelect");
+
+        select.style.display =
+            this.value === "tournament" ? "block" : "none";
+
+        updateChart();
+    });
 
 function getBadgeTierName(tier){
 
@@ -4734,6 +4971,112 @@ function restoreSelectedBadgeIcon(){
 }
 renderDashboardBadgeIcon();
 
+function openTournaments(){
+    document.getElementById("settingsMenu").style.display = "none";
+    document.getElementById("tournamentModal").style.display = "flex";
+
+    renderTournaments();
+}
+
+function closeTournaments(){
+    document.getElementById("tournamentModal").style.display = "none";
+}
+
+function addTournament(){
+    const input = document.getElementById("tournamentNameInput");
+    const name = input.value.trim();
+
+    if(!name){
+        alert("Bitte einen Turniernamen eingeben.");
+        return;
+    }
+
+    const date = new Date().toLocaleDateString("de-DE");
+
+data.tournaments.push({
+    id: Date.now(),
+    name: `${name} (${date})`
+});
+
+    save();
+    input.value = "";
+
+    renderTournaments();
+    refreshTournamentSelect();
+    refreshChartTournamentSelect();
+}
+
+function deleteTournament(id){
+
+    const tournament = data.tournaments.find(
+        t => String(t.id) === String(id)
+    );
+
+    if(!tournament) return;
+
+    if(!confirm(
+        `Turnier "${tournament.name}" wirklich löschen?\n\n` +
+        `Die zugehörigen Runden bleiben erhalten, ` +
+        `werden aber nicht mehr als Turnierrunden geführt.`
+    )){
+        return;
+    }
+
+    // Zugehörige Runden vom Turnier lösen
+    data.v.forEach(e => {
+        if(String(e.tournamentId) === String(id)){
+            e.isTournament = false;
+            e.tournamentId = "";
+        }
+    });
+
+    // Turnier entfernen
+    data.tournaments = data.tournaments.filter(
+        t => String(t.id) !== String(id)
+    );
+
+    save();
+
+    renderTournaments();
+    refreshTournamentSelect();
+    refreshChartTournamentSelect();
+    stats();
+}
+
+function renderTournaments(){
+    const list = document.getElementById("tournamentList");
+    list.innerHTML = "";
+
+    if(data.tournaments.length === 0){
+        list.innerHTML = "<p>Noch keine Turniere vorhanden.</p>";
+        return;
+    }
+
+    data.tournaments.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "card";
+
+        const count = data.v.filter(
+            e => String(e.tournamentId) === String(t.id)
+        ).length;
+
+        div.innerHTML = `
+            <b>${t.name}</b>
+            <div class="small">${count} Runden</div>
+
+            <button onclick="jumpToTournament('${t.id}')">
+                Runden im Verlauf anzeigen
+            </button>
+
+            <button onclick="deleteTournament('${t.id}')">
+                Turnier löschen
+            </button>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
 </script>
 
 <div id="dashboardStatModal" class="dashboard-stat-modal">
@@ -4768,6 +5111,9 @@ renderDashboardBadgeIcon();
 
 <button onclick="openBadges()">
     Abzeichen
+</button>
+<button onclick="openTournaments()">
+    Turniere
 </button>
 
     <div class="settings-section">
@@ -4894,6 +5240,27 @@ renderDashboardBadgeIcon();
     </div>
 </div>
 </div>
+
+<div id="tournamentModal" class="badge-modal">
+    <div class="place-modal-content">
+
+        <h3>Turniere verwalten</h3>
+
+        <input id="tournamentNameInput"
+               placeholder="Name des Turniers">
+
+        <button onclick="addTournament()">
+            Turnier hinzufügen
+        </button>
+
+        <div id="tournamentList" style="margin-top:12px;"></div>
+
+        <button onclick="closeTournaments()">
+            Fertig
+        </button>
+    </div>
+</div>
+
 
 </body>
 </html>
