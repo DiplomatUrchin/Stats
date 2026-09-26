@@ -2377,37 +2377,29 @@ return 0;
 
         if(graphType === "dailyAverage"){
 
-            keys.forEach(k => {
+    keys.forEach(k => {
+        const dayEntries = groups[k];
 
-                const dayEntries = groups[k];
+        // Erst ab 3 Runden berücksichtigen
+        if(dayEntries.length < 3){
+            return;
+        }
 
-                // Tagesdurchschnitt erst ab 3 Einträgen berechnen
-                if(dayEntries.length < 3){
-                    return;
-                }
+        const dailyScore =
+            calculateDailyScore(dayEntries);
 
-                let scoreSum = 0;
+        const dateParts = k.split("-");
 
-                dayEntries.forEach(e => {
-                    scoreSum += getEntryScore(e);
-                });
+        const displayDate =
+            dateParts[2] + "." +
+            dateParts[1] + "." +
+            dateParts[0];
 
-                let dailyAverage =
-                    scoreSum / dayEntries.length;
+        labels.push(displayDate);
+        values.push(dailyScore);
+    });
 
-                let dateParts = k.split("-");
-
-                let displayDate =
-                    dateParts[2] + "." +
-                    dateParts[1] + "." +
-                    dateParts[0];
-
-                labels.push(displayDate);
-                values.push(dailyAverage);
-
-            });
-
-        } else {
+} else {
 
             let temp = [];
 
@@ -2457,6 +2449,58 @@ return 0;
             }
         }
     });
+}
+
+function calculateDailyScore(dayEntries) {
+    let totalThrows = 0;
+    let totalHits = 0;
+    let totalWins = 0;
+    let totalRounds = 0;
+
+    let emptySum = 0;
+    let emptyCount = 0;
+
+    dayEntries.forEach(e => {
+        totalThrows += Number(e.w) || 0;
+        totalHits += Number(e.t) || 0;
+        totalRounds++;
+
+        if (e.win) totalWins++;
+
+        if (
+            e.eRaw !== null &&
+            e.eRaw !== undefined &&
+            !isNaN(e.eRaw)
+        ) {
+            const adjusted = adjustE(
+                Number(e.eRaw),
+                e.drink
+            );
+
+            if (adjusted > 0) {
+                emptySum += adjusted;
+                emptyCount++;
+            }
+        }
+    });
+
+    const hit = totalThrows > 0
+        ? totalHits / totalThrows * 100
+        : 0;
+
+    const win = totalRounds > 0
+        ? totalWins / totalRounds * 100
+        : 0;
+
+    const empty = emptyCount > 0
+        ? emptySum / emptyCount
+        : 0;
+
+    return (
+        (hit / 100) * 40 +
+        (win / 100) * 20 +
+        (empty > 0 ? (3 / empty) * 40 : 0)
+    );
 }
 
 function calculateWinStreaks(){
@@ -4481,13 +4525,49 @@ function getBadgeStages(category){
 
     // NEU: Tagesdurchschnitt
     if(category === "dailyAverage"){
-        return [
-            {tier:"bronze", target:60, emoji:"📅"},
-            {tier:"silver", target:70, emoji:"📅"},
-            {tier:"gold", target:80, emoji:"📅"},
-            {tier:"diamond", target:90, emoji:"📅"}
-        ];
+
+    if(data.v.length === 0){
+        return 0;
     }
+
+    const days = {};
+
+    data.v.forEach(e => {
+        if(!e.time) return;
+
+        const date = new Date(e.time);
+
+        const key =
+            date.getFullYear() + "-" +
+            String(date.getMonth() + 1).padStart(2, "0") + "-" +
+            String(date.getDate()).padStart(2, "0");
+
+        if(!days[key]){
+            days[key] = [];
+        }
+
+        days[key].push(e);
+    });
+
+    let highestDailyScore = 0;
+
+    Object.values(days).forEach(dayEntries => {
+
+        // Erst ab 3 Runden berücksichtigen
+        if(dayEntries.length < 3){
+            return;
+        }
+
+        const dailyScore =
+            calculateDailyScore(dayEntries);
+
+        if(dailyScore > highestDailyScore){
+            highestDailyScore = dailyScore;
+        }
+    });
+
+    return highestDailyScore;
+}
 
     // NEU: Scharfschütze
 
