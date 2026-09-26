@@ -4523,6 +4523,16 @@ function getBadgeStages(category){
         ];
     }
 
+    // TAGESDURCHSCHNITT
+if(category === "dailyAverage"){
+    return [
+        {tier: "bronze", target: 60, emoji: "📅"},
+        {tier: "silver", target: 70, emoji: "📅"},
+        {tier: "gold", target: 80, emoji: "📅"},
+        {tier: "diamond", target: 90, emoji: "📅"}
+    ];
+}
+
     // NEU: Tagesdurchschnitt
     if(category === "dailyAverage"){
 
