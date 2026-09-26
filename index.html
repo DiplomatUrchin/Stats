@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Statistik App4</title>
+<title>Statistik App2</title>
 
 <link rel="manifest" href="manifest.json">
 
@@ -1261,6 +1261,7 @@ body.dark .win-streak-active::before {
     <option value="win">Siegquote</option>
     <option value="empty">Leer-Durchschnitt</option>
     <option value="tropf">Tropfquote</option>
+    <option value="dailyAverage">Tagesdurchschnitt</option>
 </select>
 
 <pre id="stats"></pre>
@@ -2334,7 +2335,7 @@ if(e.tropf) tropfCount++;
         if(graphType === "empty") return ae;
         if(graphType === "tropf") return tq;
 
-        return 0;
+return 0;
     }
 
     if(mode === "entry"){
@@ -2350,31 +2351,82 @@ if(e.tropf) tropfCount++;
             values.push(calcValue(temp));
         });
 
-    } else {
+        } else {
 
         let groups = {};
 
         filtered.forEach(e=>{
 
-            let d = new Date(e.time).toLocaleDateString("de-DE");
+            let date = new Date(e.time);
 
-            if(!groups[d]) groups[d] = [];
+            let key =
+                date.getFullYear() + "-" +
+                String(date.getMonth() + 1).padStart(2, "0") + "-" +
+                String(date.getDate()).padStart(2, "0");
 
-            groups[d].push(e);
+            if(!groups[key]){
+                groups[key] = [];
+            }
+
+            groups[key].push(e);
         });
 
         let keys = Object.keys(groups);
 
-        let temp = [];
+        keys.sort();
 
-        keys.forEach(k=>{
+        if(graphType === "dailyAverage"){
 
-            temp = temp.concat(groups[k]);
+            keys.forEach(k => {
 
-            labels.push(k);
+                const dayEntries = groups[k];
 
-            values.push(calcValue(temp));
-        });
+                // Tagesdurchschnitt erst ab 3 Einträgen berechnen
+                if(dayEntries.length < 3){
+                    return;
+                }
+
+                let scoreSum = 0;
+
+                dayEntries.forEach(e => {
+                    scoreSum += getEntryScore(e);
+                });
+
+                let dailyAverage =
+                    scoreSum / dayEntries.length;
+
+                let dateParts = k.split("-");
+
+                let displayDate =
+                    dateParts[2] + "." +
+                    dateParts[1] + "." +
+                    dateParts[0];
+
+                labels.push(displayDate);
+                values.push(dailyAverage);
+
+            });
+
+        } else {
+
+            let temp = [];
+
+            keys.forEach(k => {
+
+                temp = temp.concat(groups[k]);
+
+                let dateParts = k.split("-");
+
+                let displayDate =
+                    dateParts[2] + "." +
+                    dateParts[1] + "." +
+                    dateParts[0];
+
+                labels.push(displayDate);
+
+                values.push(calcValue(temp));
+            });
+        }
     }
 
     if(chart) chart.destroy();
@@ -2386,7 +2438,10 @@ if(e.tropf) tropfCount++;
         data: {
             labels: labels,
             datasets: [{
-                label: graphType,
+                label:
+    graphType === "dailyAverage"
+        ? "Tagesdurchschnitt"
+        : graphType,
                 data: values,
                 fill: false,
                 tension: 0.2
@@ -2644,7 +2699,6 @@ if(streaks.longest >= 20){
     streakTarget = 3;
     streakNext = 5 - streaks.longest;
 }
-
 let perfectTier = "locked";
 let perfectTarget = 1;
 let perfectNext = 1 - perfectRounds;
@@ -2666,6 +2720,39 @@ if(perfectRounds >= 5){
     perfectTarget = 1;
     perfectNext = 2 - perfectRounds;
 }
+
+
+// =========================================================
+// TAGESDURCHSCHNITT
+// =========================================================
+
+const dailyAverage = getBadgeCurrentValue("dailyAverage");
+
+let dailyAverageTier = "locked";
+let dailyAverageTarget = 60;
+let dailyAverageNext = 60 - dailyAverage;
+
+if(dailyAverage >= 90){
+    dailyAverageTier = "diamond";
+    dailyAverageTarget = 90;
+    dailyAverageNext = 0;
+}else if(dailyAverage >= 80){
+    dailyAverageTier = "gold";
+    dailyAverageTarget = 80;
+    dailyAverageNext = 90 - dailyAverage;
+}else if(dailyAverage >= 70){
+    dailyAverageTier = "silver";
+    dailyAverageTarget = 70;
+    dailyAverageNext = 80 - dailyAverage;
+}else if(dailyAverage >= 60){
+    dailyAverageTier = "bronze";
+    dailyAverageTarget = 60;
+    dailyAverageNext = 70 - dailyAverage;
+}
+
+
+// =========================================================
+// SCHARFSCHÜTZE
 
 // =========================================================
 // SCHARFSCHÜTZE
@@ -2834,7 +2921,7 @@ if(teamRounds >= 100){
 </div>
 
 
-      <div class="badge-card" onclick="openBadgeDetail('perfect')">
+            <div class="badge-card" onclick="openBadgeDetail('perfect')">
     <div class="badge-circle ${perfectTier}">
         💯
     </div>
@@ -2851,6 +2938,26 @@ if(teamRounds >= 100){
         }
     </div>
 </div>
+
+
+        <div class="badge-card" onclick="openBadgeDetail('dailyAverage')">
+            <div class="badge-circle ${dailyAverageTier}">
+                📅
+            </div>
+
+            <div class="badge-title">
+                Tagesdurchschnitt von ${dailyAverageTarget}
+            </div>
+
+            <div class="badge-description">
+                ${
+                    dailyAverageNext === 0
+                        ? "Diamant erreicht"
+                        : `${dailyAverageNext.toFixed(1)} bis zum nächsten Badge`
+                }
+            </div>
+        </div>
+
 
         <div class="badge-card" onclick="openBadgeDetail('sharpshooter')">
             <div class="badge-circle ${sharpshooterTier}">
@@ -4363,7 +4470,7 @@ function getBadgeStages(category){
         ];
     }
 
-    if(category === "perfect"){
+        if(category === "perfect"){
         return [
             {tier:"bronze", target:1, emoji:"💯"},
             {tier:"silver", target:2, emoji:"💯"},
@@ -4371,6 +4478,18 @@ function getBadgeStages(category){
             {tier:"diamond", target:5, emoji:"💯"}
         ];
     }
+
+    // NEU: Tagesdurchschnitt
+    if(category === "dailyAverage"){
+        return [
+            {tier:"bronze", target:60, emoji:"📅"},
+            {tier:"silver", target:70, emoji:"📅"},
+            {tier:"gold", target:80, emoji:"📅"},
+            {tier:"diamond", target:90, emoji:"📅"}
+        ];
+    }
+
+    // NEU: Scharfschütze
 
     // NEU: Scharfschütze
     if(category === "sharpshooter"){
@@ -4470,7 +4589,7 @@ function getBadgeCurrentValue(category){
     }
 
     // Bestehendes Abzeichen: perfekte Runden
-    if(category === "perfect"){
+        if(category === "perfect"){
 
         return data.v.filter(e => {
 
@@ -4489,6 +4608,63 @@ function getBadgeCurrentValue(category){
 
         }).length;
     }
+
+    // NEU: Tagesdurchschnitt
+    if(category === "dailyAverage"){
+
+        if(data.v.length === 0){
+            return 0;
+        }
+
+        const days = {};
+
+        data.v.forEach(e => {
+
+            if(!e.time) return;
+
+            const date = new Date(e.time);
+
+            const key =
+                date.getFullYear() + "-" +
+                String(date.getMonth() + 1).padStart(2, "0") + "-" +
+                String(date.getDate()).padStart(2, "0");
+
+            if(!days[key]){
+                days[key] = [];
+            }
+
+            days[key].push(e);
+
+        });
+
+        let highestDailyAverage = 0;
+
+        Object.values(days).forEach(dayEntries => {
+
+            // Ein Tag zählt erst ab 3 Einträgen
+            if(dayEntries.length < 3){
+                return;
+            }
+
+            let scoreSum = 0;
+
+            dayEntries.forEach(e => {
+                scoreSum += getEntryScore(e);
+            });
+
+            const dailyAverage =
+                scoreSum / dayEntries.length;
+
+            if(dailyAverage > highestDailyAverage){
+                highestDailyAverage = dailyAverage;
+            }
+
+        });
+
+        return highestDailyAverage;
+    }
+
+    // NEU: Scharfschütze
 
     // NEU: Scharfschütze
     // Jede Runde mit 100% Trefferquote zählt.
@@ -4534,8 +4710,12 @@ function getBadgeCategoryName(category){
         return "Siegesstreak";
     }
 
-    if(category === "perfect"){
+        if(category === "perfect"){
         return "Perfekte Runden";
+    }
+
+    if(category === "dailyAverage"){
+        return "Tagesdurchschnitt";
     }
 
     if(category === "sharpshooter"){
