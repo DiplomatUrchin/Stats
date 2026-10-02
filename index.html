@@ -746,6 +746,36 @@ body.dark .settings-section {
     background:#8DE7FF;
 }
 
+.badge-circle.spucke{
+    background:#ffffff;
+    border:1px solid #d0d0d0;
+}
+
+.badge-circle.kotze{
+    background:#1f4d2b;
+    color:#ffffff;
+}
+
+.badge-circle.kacke{
+    background:#4a2f1f;
+    color:#ffffff;
+}
+
+body.dark .badge-circle.spucke{
+    background:#ffffff;
+    border:1px solid #555555;
+}
+
+body.dark .badge-circle.kotze{
+    background:#163820;
+    color:#ffffff;
+}
+
+body.dark .badge-circle.kacke{
+    background:#382318;
+    color:#ffffff;
+}
+
 .badge-title{
     font-size:11px;
     font-weight:700;
@@ -927,6 +957,65 @@ body.dark .badge-app-icon-button{
     color: #00A4DB;
 }
 
+#badBadgeSection{
+    margin-top:20px;
+    padding:12px 0;
+    border:1px solid #d8d8d8;
+    border-radius:14px;
+    background:#f7f7f7;
+}
+
+.bad-badge-heading{
+    font-size:13px;
+    font-weight:700;
+    text-align:center;
+    margin-bottom:10px;
+    opacity:0.7;
+}
+
+#badBadgeList{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+}
+
+#badBadgeList .badge-card{
+    min-width:0;
+    text-align:center;
+    padding:8px 4px;
+    box-sizing:border-box;
+}
+
+#badBadgeList .badge-circle{
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    margin:0 auto 7px auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:25px;
+}
+
+#badBadgeList .badge-title{
+    font-size:11px;
+    font-weight:700;
+    line-height:1.2;
+    margin-top:4px;
+}
+
+#badBadgeList .badge-description{
+    font-size:9px;
+    line-height:1.25;
+    margin-top:3px;
+    opacity:0.65;
+}
+
+body.dark #badBadgeSection{
+    background:#181818;
+    border-color:#444;
+}
+
 @media (max-width:500px){
 
     #badgeList{
@@ -1047,6 +1136,15 @@ body.dark .win-streak-active::before {
         font-size:7px;
     }
 }
+
+    #badBadgeList{
+        grid-template-columns:repeat(3,1fr);
+        gap:6px;
+    }
+
+    #badBadgeList .badge-card{
+        padding:7px 3px;
+    }
 
 @keyframes tournamentHighlight {
     0%, 100% {
@@ -2552,7 +2650,7 @@ function getPerfectRoundCount(){
         if(!entry.win) continue;
         if(entry.tropf) continue;
 
-        if(entry.w <= 0) continue;
+        if(Number(entry.w) < 3) continue;
 
         const hitQuote = (entry.t / entry.w) * 100;
 
@@ -2689,10 +2787,17 @@ function renderBadges(){
     const totalRounds = data.v.length;
 
     const perfectRounds = data.v.filter(e => {
-    const hitRate = e.w > 0 ? (e.t / e.w) * 100 : 0;
+    const w = Number(e.w) || 0;
+    const t = Number(e.t) || 0;
+
+    const hitRate = w > 0
+        ? (t / w) * 100
+        : 0;
+
     const emptyAverage = e.e;
 
     return (
+        w >= 3 &&
         hitRate >= 100 &&
         e.win === true &&
         emptyAverage !== null &&
@@ -2804,9 +2909,12 @@ if(dailyAverage >= 90){
 
 const sharpshooterRounds = data.v.filter(e => {
 
-    if(Number(e.w) <= 0) return false;
+    const w = Number(e.w) || 0;
+    const t = Number(e.t) || 0;
 
-    return Number(e.t) === Number(e.w);
+    if(w < 3) return false;
+
+    return t === w;
 
 }).length;
 
@@ -2926,6 +3034,8 @@ if(teamRounds >= 100){
 }
 
     list.innerHTML = `
+
+    
 
        <div class="badge-card" onclick="openBadgeDetail('rounds')">
     <div class="badge-circle ${roundsTier}">
@@ -3079,6 +3189,117 @@ if(teamRounds >= 100){
         </div>
 
     `;
+
+        const badBadgeList =
+        document.getElementById("badBadgeList");
+
+    if(!badBadgeList) return;
+
+    const losingStreaks = calculateLosingStreaks();
+
+    const antiSharpshooterRounds =
+    getBadgeCurrentValue("antiSharpshooter");
+
+let antiSharpshooterTier = "locked";
+let antiSharpshooterTarget = 5;
+let antiSharpshooterNext = 5 - antiSharpshooterRounds;
+
+if(antiSharpshooterRounds >= 25){
+
+    antiSharpshooterTier = "kacke";
+    antiSharpshooterTarget = 25;
+    antiSharpshooterNext = 0;
+
+}else if(antiSharpshooterRounds >= 10){
+
+    antiSharpshooterTier = "kotze";
+    antiSharpshooterTarget = 10;
+    antiSharpshooterNext = 25 - antiSharpshooterRounds;
+
+}else if(antiSharpshooterRounds >= 5){
+
+    antiSharpshooterTier = "spucke";
+    antiSharpshooterTarget = 5;
+    antiSharpshooterNext = 10 - antiSharpshooterRounds;
+
+}
+
+    const losingValue = losingStreaks.longest;
+
+    let losingTier = "locked";
+    let losingTarget = 5;
+    let losingNext = 5 - losingValue;
+
+    if(losingValue >= 20){
+
+        losingTier = "kacke";
+        losingTarget = 20;
+        losingNext = 0;
+
+    }else if(losingValue >= 10){
+
+        losingTier = "kotze";
+        losingTarget = 10;
+        losingNext = 20 - losingValue;
+
+    }else if(losingValue >= 5){
+
+        losingTier = "spucke";
+        losingTarget = 5;
+        losingNext = 10 - losingValue;
+
+    }
+
+    badBadgeList.innerHTML = `
+
+    <div class="badge-card"
+         onclick="openBadgeDetail('antiSharpshooter')">
+
+        <div class="badge-circle ${antiSharpshooterTier}">
+            🎯
+        </div>
+
+        <div class="badge-title">
+            Antischarfschütze ${antiSharpshooterTarget}
+        </div>
+
+        <div class="badge-description">
+
+            ${
+                antiSharpshooterNext === 0
+                    ? "Kacke erreicht"
+                    : `${antiSharpshooterNext} bis zum nächsten Badge`
+            }
+
+        </div>
+
+    </div>
+
+
+    <div class="badge-card"
+         onclick="openBadgeDetail('losingStreak')">
+
+        <div class="badge-circle ${losingTier}">
+            🔥
+        </div>
+
+        <div class="badge-title">
+            Losing Streak ${losingTarget}
+        </div>
+
+        <div class="badge-description">
+
+            ${
+                losingNext === 0
+                    ? "Kacke erreicht"
+                    : `${losingNext} bis zum nächsten Badge`
+            }
+
+        </div>
+
+    </div>
+
+`;
 }
 
 function stats(){
@@ -3173,6 +3394,39 @@ if(longestStreakElement){
 }
 
     updateChart();
+}
+
+function calculateLosingStreaks(){
+
+    const entries = [...data.v].sort((a, b) => {
+        return new Date(a.time) - new Date(b.time);
+    });
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+
+    for(const entry of entries){
+
+        if(!entry.win){
+
+            currentStreak++;
+
+            if(currentStreak > longestStreak){
+                longestStreak = currentStreak;
+            }
+
+        }else{
+
+            currentStreak = 0;
+
+        }
+
+    }
+
+    return {
+        current: currentStreak,
+        longest: longestStreak
+    };
 }
 
 function add(){
@@ -4620,7 +4874,25 @@ if(category === "dailyAverage"){
             {tier:"diamond", target:100, emoji:"👨‍👩‍👧‍👦"}
         ];
     }
+        // =========================================================
+    // SCHLECHTES ABZEICHEN: LOSING STREAK
+    // =========================================================
 
+    if(category === "losingStreak"){
+    return [
+        {tier:"spucke", target:5, emoji:"🔥"},
+        {tier:"kotze", target:10, emoji:"🔥"},
+        {tier:"kacke", target:20, emoji:"🔥"}
+    ];
+}
+
+if(category === "antiSharpshooter"){
+    return [
+        {tier:"spucke", target:5, emoji:"🎯"},
+        {tier:"kotze", target:10, emoji:"🎯"},
+        {tier:"kacke", target:25, emoji:"🎯"}
+    ];
+}
     return [];
 }
 
@@ -4678,26 +4950,36 @@ function getBadgeCurrentValue(category){
         return streaks.longest;
     }
 
+    if(category === "losingStreak"){
+    const losingStreaks = calculateLosingStreaks();
+
+    return losingStreaks.longest;
+}
+
     // Bestehendes Abzeichen: perfekte Runden
         if(category === "perfect"){
 
-        return data.v.filter(e => {
+    return data.v.filter(e => {
 
-            const hitRate = e.w > 0
-                ? (e.t / e.w) * 100
-                : 0;
+        const w = Number(e.w) || 0;
+        const t = Number(e.t) || 0;
 
-            const emptyAverage = e.e;
+        const hitRate = w > 0
+            ? (t / w) * 100
+            : 0;
 
-            return (
-                hitRate >= 100 &&
-                e.win === true &&
-                emptyAverage !== null &&
-                emptyAverage <= 3
-            );
+        const emptyAverage = e.e;
 
-        }).length;
-    }
+        return (
+            w >= 3 &&
+            hitRate >= 100 &&
+            e.win === true &&
+            emptyAverage !== null &&
+            emptyAverage <= 3
+        );
+
+    }).length;
+}
 
     // NEU: Tagesdurchschnitt
     if(category === "dailyAverage"){
@@ -4760,14 +5042,33 @@ function getBadgeCurrentValue(category){
     // Jede Runde mit 100% Trefferquote zählt.
     if(category === "sharpshooter"){
 
-        return data.v.filter(e => {
+    return data.v.filter(e => {
 
-            if(Number(e.w) <= 0) return false;
+        const w = Number(e.w) || 0;
+        const t = Number(e.t) || 0;
 
-            return Number(e.t) === Number(e.w);
+        if(w < 3) return false;
 
-        }).length;
-    }
+        return t === w;
+
+    }).length;
+}
+
+if(category === "antiSharpshooter"){
+
+    return data.v.filter(e => {
+
+        const w = Number(e.w) || 0;
+        const t = Number(e.t) || 0;
+
+        // Mindestens 3 Würfe
+        if(w < 3) return false;
+
+        // Exakt 0 % Trefferquote
+        return t === 0;
+
+    }).length;
+}
 
     if(category === "alone"){
     return data.v.filter(e =>
@@ -4812,6 +5113,10 @@ function getBadgeCategoryName(category){
         return "Scharfschütze";
     }
 
+    if(category === "antiSharpshooter"){
+    return "Antischarfschütze";
+}
+
     if(category === "alone"){
         return "Alleine gespielt";
     }
@@ -4822,6 +5127,10 @@ function getBadgeCategoryName(category){
 
     if(category === "team"){
         return "Im Team gespielt";
+    }
+
+        if(category === "losingStreak"){
+        return "Losing Streak";
     }
 
     return "Abzeichen";
@@ -4871,6 +5180,18 @@ function getBadgeTierName(tier){
 
     if(tier === "diamond"){
         return "Diamant";
+    }
+
+        if(tier === "spucke"){
+        return "Spucke";
+    }
+
+    if(tier === "kotze"){
+        return "Kotze";
+    }
+
+    if(tier === "kacke"){
+        return "Kacke";
     }
 
     return "";
@@ -5467,9 +5788,17 @@ function renderTournaments(){
 
         <div id="badgeList"></div>
 
-        <button onclick="closeBadges()">
-            Fertig
-        </button>
+<div id="badBadgeSection">
+    <div class="bad-badge-heading">
+        Schlechte Abzeichen
+    </div>
+
+    <div id="badBadgeList"></div>
+</div>
+
+<button onclick="closeBadges()">
+    Fertig
+</button>
 
     </div>
 
