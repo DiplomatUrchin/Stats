@@ -4459,6 +4459,50 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.register("service-worker.js");
 }
 
+
+/* ===== BACKUP ERINNERUNG ALLE 3 TAGE ===== */
+
+function checkBackupReminder(){
+
+    const backupKey = "lastBackupReminder";
+    const interval = 3 * 24 * 60 * 60 * 1000;
+
+    const now = Date.now();
+
+    const lastReminder = Number(
+        localStorage.getItem(backupKey)
+    );
+
+    // Beim ersten Start 3 Tage warten
+    if(!lastReminder){
+        localStorage.setItem(backupKey, now);
+        return;
+    }
+
+    // Prüfen, ob 3 Tage vergangen sind
+    if(now - lastReminder >= interval){
+
+        // Zeitpunkt der Erinnerung speichern
+        localStorage.setItem(backupKey, now);
+
+        setTimeout(() => {
+
+            const backup = confirm(
+                "💾 Backup-Erinnerung\n\n" +
+                "Es sind 3 Tage vergangen.\n\n" +
+                "Möchtest du jetzt ein Backup " +
+                "erstellen und deine Daten exportieren?"
+            );
+
+            if(backup){
+                exportData();
+            }
+
+        }, 1000);
+    }
+}
+
+
 function exportData(){
     const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
     const url = URL.createObjectURL(blob);
@@ -4515,7 +4559,14 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("defaultDrinkSelect").value =
         data.defaultDrink || "05";
 
+    
+    
     updateDarkButton();
+
+    // Backup-Erinnerung prüfen
+    checkBackupReminder();
+
+
 });
 
 function updateDarkButton(){
